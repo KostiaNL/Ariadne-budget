@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <style>@media print{header,nav,.no-print{display:none!important}main{padding:0!important}}</style>
   <title>Ariadne Bio — Programme Budget Tracker</title>
   <script>/**
  * @license React
@@ -1339,7 +1340,7 @@ async function jbPush(data){
 function SyncBar({status,lastSync,savedBy,onPull,onPush,userName,onSetUserName}){
   const fmt=t=>t?t.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}):'—';
   const SC={idle:'text-gray-500',pulling:'text-blue-500 animate-pulse',pushing:'text-blue-500 animate-pulse',pulled:'text-green-600',pushed:'text-green-600',error:'text-red-500'};
-  const SL={idle:'Ready',pulling:'Pulling…',pushing:'Pushing…',pulled:'Pulled ✓',pushed:'Pushed ✓',error:'Error'};
+  const SL={idle:'🔁 Auto',pulling:'Pulling…',pushing:'Pushing…',pulled:'Pulled ✓',pushed:'Pushed ✓',error:'Error'};
   if(!SYNC_ON)return(
     <div className="px-5 py-2 text-xs font-semibold text-orange-600 bg-orange-50 border-b border-orange-100 flex items-center gap-2">
       ⚠ Cloud sync not configured —
@@ -1384,6 +1385,8 @@ const todayStr=()=>new Date().toISOString().split('T')[0];
 const isOverdue=p=>!p.paid&&p.dueDate&&p.dueDate<todayStr();
 const yBgt=yr=>yr?sum(['q1','q2','q3','q4'].map(q=>yr[q+'b']||0)):0;
 const yAct=yr=>yr?sum(['q1','q2','q3','q4'].map(q=>yr[q+'a']||0)):0;
+const actYBgt=(act,y)=>yBgt(act.years[y])+sum((act.cros||[]).filter(c=>String(c.fyYear)===String(y)&&(c.quoteAmount||0)>0).map(c=>c.quoteAmount||0));
+const effBgt=(act,y)=>{const b=actYBgt(act,y);return b>0?b:yAct(act.years[y]);};
 
 /* ── Config ── */
 const CS_CFG={
@@ -1406,6 +1409,7 @@ const CAT_COLORS={
   'Regulatory':'#7c3aed',
   'General & Administrative (G&A)':'#6b7280',
 };
+const CAT_PALETTE=['#0f766e','#0369a1','#6d28d9','#be185d','#b45309','#15803d','#0891b2','#7c3aed','#dc2626','#c026d3','#0284c7','#d97706'];
 const cc=c=>CAT_COLORS[c]||NAVY;
 
 const STUDY_STATUS=['Planned','Ongoing','Complete','On Hold'];
@@ -1568,7 +1572,7 @@ function SubStudyCard({ss,onUpdate,onDelete}){
     </div>
   );
 }
-function CROCard({cro,onUpdate,onDelete}){
+function CROCard({cro,years,onUpdate,onDelete}){
   const[open,setOpen]=useState(false);
   const addSS=()=>onUpdate({...cro,subStudies:[...cro.subStudies,{id:uid(),name:'',amount:0,startDate:'',endDate:'',status:'Planned',payments:[]}]});
   const updSS=(sid,ss)=>onUpdate({...cro,subStudies:cro.subStudies.map(x=>x.id===sid?ss:x)});
@@ -1578,7 +1582,7 @@ function CROCard({cro,onUpdate,onDelete}){
       <div className="flex items-center gap-3 px-4 py-2.5" style={{background:`linear-gradient(90deg,${NAVY}18,${PURPLE}12)`}}>
         <span className="cursor-pointer text-indigo-400 w-4 text-xs" onClick={()=>setOpen(o=>!o)}>{open?'▼':'▶'}</span>
         <div className="flex-1 font-bold text-gray-800 text-sm"><input className="bg-transparent border-none outline-none font-bold text-gray-800 text-sm w-full" value={cro.name} onChange={e=>onUpdate({...cro,name:e.target.value})} placeholder="CRO / Partner name…"/></div>
-        <div className="text-xs text-gray-600">Quote: <input type="number" className="w-28 text-right border border-gray-200 rounded px-2 py-0.5 text-xs bg-white" value={cro.quoteAmount||''} onChange={e=>onUpdate({...cro,quoteAmount:parseFloat(e.target.value)||0})}/></div>
+        <div className="text-xs text-gray-600">Quote: <input type="number" className="w-28 text-right border border-gray-200 rounded px-2 py-0.5 text-xs bg-white" value={cro.quoteAmount||''} onChange={e=>onUpdate({...cro,quoteAmount:parseFloat(e.target.value)||0})}/></div><div className="text-xs text-gray-600 flex items-center gap-1">FY: <select className="border border-gray-200 rounded px-1 py-0.5 text-xs bg-white" value={cro.fyYear||''} onChange={e=>onUpdate({...cro,fyYear:e.target.value})}><option value=''>—</option>{(years||[]).map(y=><option key={y} value={y}>FY{y}</option>)}</select></div>
         {cro.quoteDocUrl?<a href={cro.quoteDocUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline">📄 Quote</a>:<input className="text-xs border border-gray-200 rounded px-2 py-0.5 bg-white w-48 text-gray-500" value={cro.quoteDocUrl||''} onChange={e=>onUpdate({...cro,quoteDocUrl:e.target.value})} placeholder="Quote URL…"/>}
         <span className="text-xs text-gray-500">{cro.subStudies.length} sub-{cro.subStudies.length===1?'study':'studies'}</span>
         <button onClick={onDelete} className="text-gray-300 hover:text-red-400 text-xl font-bold ml-1 leading-none">×</button>
@@ -1591,8 +1595,8 @@ function CROCard({cro,onUpdate,onDelete}){
     </div>
   );
 }
-function CROSection({activity,onUpdateActivity}){
-  const addCRO=()=>onUpdateActivity({...activity,cros:[...activity.cros,{id:uid(),name:'',quoteAmount:0,quoteDocUrl:'',subStudies:[]}]});
+function CROSection({activity,years,onUpdateActivity}){
+  const addCRO=()=>onUpdateActivity({...activity,cros:[...activity.cros,{id:uid(),name:'',quoteAmount:0,quoteDocUrl:'',fyYear:'',subStudies:[]}]});
   const updCRO=(cid,cro)=>onUpdateActivity({...activity,cros:activity.cros.map(c=>c.id===cid?cro:c)});
   const delCRO=cid=>onUpdateActivity({...activity,cros:activity.cros.filter(c=>c.id!==cid)});
   return(
@@ -1602,13 +1606,13 @@ function CROSection({activity,onUpdateActivity}){
         <button onClick={addCRO} className="text-xs px-3 py-1.5 rounded-lg font-bold text-white" style={{background:PURPLE}}>+ Add CRO</button>
       </div>
       {activity.cros.length===0&&<div className="text-xs text-gray-400 text-center py-3 border-2 border-dashed border-indigo-100 rounded-xl">No CROs assigned.</div>}
-      {activity.cros.map(cro=><CROCard key={cro.id} cro={cro} onUpdate={nc=>updCRO(cro.id,nc)} onDelete={()=>delCRO(cro.id)}/>)}
+      {activity.cros.map(cro=><CROCard key={cro.id} cro={cro} years={years||[]} onUpdate={nc=>updCRO(cro.id,nc)} onDelete={()=>delCRO(cro.id)}/>)}
     </div>
   );
 }
 
 /* ══ ACTIVITY MODAL ══ */
-function ActivityModal({activity,years,onSave,onClose,defaultCategory,customStatuses}){
+function ActivityModal({activity,years,onSave,onClose,defaultCategory,customStatuses,allCats,catNames}){
   const isNew=!activity;
   const blank={id:uid(),category:defaultCategory||ALL_CATS[0],name:'',commitmentStatus:'Committed',includeDD:true,activeInBudget:true,comments:'',cros:[],years:Object.fromEntries(years.map(y=>[y,{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}]))};
   const[form,setForm]=useState(activity?{...activity,years:Object.fromEntries(Object.entries(activity.years).map(([y,d])=>[y,{...d}]))}:blank);
@@ -1628,7 +1632,7 @@ function ActivityModal({activity,years,onSave,onClose,defaultCategory,customStat
         <div className="p-6 space-y-4 overflow-y-auto max-h-[75vh]">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2"><label className={lbl}>Activity Name *</label><input className={inp} value={form.name} onChange={e=>set('name',e.target.value)}/></div>
-            <div><label className={lbl}>Category</label><select className={inp} value={form.category} onChange={e=>set('category',e.target.value)}>{ALL_CATS.map(c=><option key={c}>{c}</option>)}</select></div>
+            <div><label className={lbl}>Category</label><select className={inp} value={form.category} onChange={e=>set('category',e.target.value)}>{(allCats||ALL_CATS).map(c=><option key={c} value={c}>{catNames?.[c]||c}</option>)}</select></div>
             <div>
               <label className={lbl}>Commitment Status <span className="text-gray-400 font-normal normal-case">(type freely or pick preset)</span></label>
               <input list="cs-datalist" className={inp} value={form.commitmentStatus} onChange={e=>set('commitmentStatus',e.target.value)} placeholder="Type or select…"/>
@@ -1663,31 +1667,266 @@ function ActivityModal({activity,years,onSave,onClose,defaultCategory,customStat
 }
 
 /* ══ DASHBOARD ══ */
-function Dashboard({acts,years}){
+function ScenariosPanel({acts,years,scenarios,catNames,catOrder,onSave,onLoad,onDelete,onExport,onToggleActive}){
+  const[newName,setNewName]=React.useState('');
+  const[activeScId,setActiveScId]=React.useState(null);
+  const[exportYears,setExportYears]=React.useState(null);
+  const effExportYears=exportYears||[...years];
+  const toggleExportYear=y=>setExportYears(prev=>{
+    const cur=prev||[...years];
+    if(cur.includes(y)){const n=cur.filter(x=>x!==y);return n.length===0?cur:n;}
+    return years.filter(yr=>cur.includes(yr)||yr===y);
+  });
+  const dCat=c=>(catNames&&catNames[c])||c;
+  const allCats=[...new Set(acts.map(a=>a.category))];
+  const ordCats=catOrder?catOrder.filter(c=>allCats.includes(c)):[...allCats];
+
+  const handleSave=()=>{
+    if(!newName.trim())return;
+    onSave(newName);
+    setNewName('');
+  };
+
+  const handleLoad=s=>{
+    onLoad(s);
+    setActiveScId(s.id);
+  };
+
+  const activeCount=sc=>acts.filter(a=>sc.actStates[a.id]!==false).length;
+
+  return(
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="bg-white rounded-2xl p-5 shadow-sm">
+        <h2 className="font-black text-gray-800 text-lg mb-1">🎯 Scenarios</h2>
+        <p className="text-sm text-gray-500">Save named views of your budget (e.g. "Lean BOD", "Extended BOD") and export clean reports for presentation.</p>
+      </div>
+
+      {/* Save current */}
+      <div className="bg-white rounded-2xl p-5 shadow-sm">
+        <div className="font-bold text-gray-700 mb-3">Save current view as a scenario</div>
+        <div className="flex gap-2 items-center">
+          <input
+            className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-400"
+            placeholder="e.g. Lean BOD, Extended Board, Q2 Update…"
+            value={newName} onChange={e=>setNewName(e.target.value)}
+            onKeyDown={e=>{if(e.key==='Enter')handleSave();}}
+          />
+          <button onClick={handleSave}
+            className="px-4 py-2 rounded-xl text-sm font-bold text-white transition-colors"
+            style={{background:PURPLE}}>
+            Save
+          </button>
+        </div>
+        <p className="text-xs text-gray-400 mt-2">Saves which activities are currently active/inactive. Existing scenario with the same name will be overwritten.</p>
+      </div>
+
+      {/* Scenario list */}
+      {scenarios.length>0&&(
+        <div className="space-y-3">
+          <div className="text-xs font-bold text-gray-400 uppercase tracking-wider px-1">Saved Scenarios ({scenarios.length})</div>
+          {[...scenarios].reverse().map(sc=>(
+            <div key={sc.id} className="bg-white rounded-2xl shadow-sm overflow-hidden">
+              <div className="flex items-center gap-3 px-5 py-3" style={{background:activeScId===sc.id?`linear-gradient(90deg,${NAVY}18,${PURPLE}10)`:'white'}}>
+                <div className="flex-1">
+                  <div className="font-bold text-gray-800">{sc.name}</div>
+                  <div className="text-xs text-gray-400 mt-0.5">
+                    {activeCount(sc)} activit{activeCount(sc)===1?'y':'ies'} active
+                    {sc.createdAt&&<span> · {new Date(sc.createdAt).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</span>}
+                  </div>
+                </div>
+                <button onClick={()=>handleLoad(sc)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors"
+                  style={activeScId===sc.id
+                    ?{background:NAVY,color:'white',borderColor:NAVY}
+                    :{background:'white',color:NAVY,borderColor:NAVY}}>
+                  {activeScId===sc.id?'✓ Loaded':'Load'}
+                </button>
+                <button onClick={()=>onExport(sc,effExportYears)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold border border-purple-300 transition-colors"
+                  style={{background:'white',color:PURPLE}}>
+                  📤 Export HTML
+                </button>
+                <button onClick={()=>{if(confirm('Delete scenario "'+sc.name+'"?'))onDelete(sc.id);}}
+                  className="px-2 py-1.5 rounded-lg text-xs font-bold text-red-400 hover:text-red-600 border border-red-200 hover:border-red-400 transition-colors">
+                  ✕
+                </button>
+              </div>
+
+              {/* Activity list for this scenario */}
+              <div className="px-5 pb-4 pt-1">
+                {ordCats.map(cat=>{
+                  const cActs=acts.filter(a=>a.category===cat);
+                  if(!cActs.length)return null;
+                  const anyInSc=cActs.some(a=>sc.actStates[a.id]!==false);
+                  return(
+                    <div key={cat} className="mb-2">
+                      <div className="text-xs font-bold uppercase tracking-wider mb-1 mt-2" style={{color:cc(cat)}}>{dCat(cat)}</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {cActs.map(a=>{
+                          const isIn=sc.actStates[a.id]!==false;
+                          return(
+                            <span key={a.id}
+                              className="px-2 py-0.5 rounded-full text-xs border font-medium"
+                              style={isIn
+                                ?{background:cc(cat)+'22',borderColor:cc(cat),color:cc(cat)}
+                                :{background:'#f3f4f6',borderColor:'#e5e7eb',color:'#9ca3af',textDecoration:'line-through'}}>
+                              {a.name}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {scenarios.length===0&&(
+        <div className="bg-white rounded-2xl p-8 shadow-sm text-center text-gray-400">
+          <div className="text-4xl mb-3">🎯</div>
+          <div className="font-bold text-gray-500 mb-1">No scenarios yet</div>
+          <div className="text-sm">Toggle activities on/off in the Budget Tracker tab, then save a scenario here.</div>
+        </div>
+      )}
+
+      {/* Export current view */}
+      <div className="bg-white rounded-2xl p-5 shadow-sm">
+        <div className="font-bold text-gray-700 mb-1">Export current active view</div>
+        <p className="text-xs text-gray-400 mb-3">Exports whatever is currently active in the Budget Tracker, without saving as a scenario.</p>
+        <div className="flex flex-wrap gap-2 mb-3">
+          <span className="text-xs font-bold text-gray-400 self-center">Years to include:</span>
+          {years.map(y=>(
+            <button key={y} onClick={()=>toggleExportYear(y)}
+              className="px-3 py-1 rounded-full text-xs font-bold border-2 transition-all"
+              style={effExportYears.includes(y)
+                ?{background:NAVY,color:'white',borderColor:NAVY}
+                :{background:'#f3f4f6',color:'#9ca3af',borderColor:'#e5e7eb'}}>
+              FY{y}
+            </button>
+          ))}
+          {exportYears!==null&&<button onClick={()=>setExportYears(null)} className="text-xs text-indigo-500 font-bold hover:underline">All</button>}
+        </div>
+        <button onClick={()=>onExport(null,effExportYears)}
+          className="px-4 py-2 rounded-xl text-sm font-bold text-white"
+          style={{background:NAVY}}>
+          📤 Export current view to HTML
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Dashboard({acts,years,catNames}){
   const active=acts.filter(a=>a.activeInBudget);
-  const allB=a=>sum(years.map(y=>yBgt(a.years[y])));
+  const allB=a=>sum(years.map(y=>effBgt(a,y)));
   const allA=a=>sum(years.map(y=>yAct(a.years[y])));
   const tB=sum(active.map(allB)),tA=sum(active.map(allA)),tV=r(tB-tA);
   const pct=tB>0?Math.round(tA/tB*100):0;
+  const allCats=[...new Set(acts.map(a=>a.category))];
+  const dispCat=c=>(catNames&&catNames[c])||c;
+  const[chartType,setChartType]=React.useState('bar');
+  const[pieMetric,setPieMetric]=React.useState('budget');
+  const[selectedCats,setSelectedCats]=React.useState(null);
+  const[showSliceLabels,setShowSliceLabels]=React.useState(false);
+  const effCats=(selectedCats===null?allCats:allCats.filter(c=>selectedCats.includes(c)));
+  const toggleCat=c=>setSelectedCats(prev=>{
+    const cur=prev===null?[...allCats]:prev;
+    if(cur.includes(c)){const n=cur.filter(x=>x!==c);return n.length===0?cur:n;}
+    return [...cur,c];
+  });
+  const selectAll=()=>setSelectedCats(null);
   const canvasRef=useRef(),chartRef=useRef();
   useEffect(()=>{
     if(!canvasRef.current)return;
-    const cats=[...new Set(acts.map(a=>a.category))];
+    const cats=effCats.length>0?effCats:allCats;
     const bgtV=cats.map(c=>sum(acts.filter(a=>a.category===c&&a.activeInBudget).map(allB)));
     const actV=cats.map(c=>sum(acts.filter(a=>a.category===c&&a.activeInBudget).map(allA)));
     const cols=cats.map(c=>cc(c));
     if(chartRef.current)chartRef.current.destroy();
-    chartRef.current=new Chart(canvasRef.current.getContext('2d'),{
-      type:'bar',data:{labels:cats.map(c=>c.length>22?c.slice(0,22)+'…':c),datasets:[
-        {label:'Budget',data:bgtV,backgroundColor:cols.map(c=>c+'33'),borderColor:cols,borderWidth:2,borderRadius:4},
-        {label:'Actual',data:actV,backgroundColor:cols.map(c=>c+'99'),borderRadius:4},
-      ]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{boxWidth:12,font:{size:10}}}},
-        scales:{x:{grid:{display:false},ticks:{font:{size:9}}},y:{grid:{color:'#f0f0f6'},ticks:{callback:v=>`$${(v/1e3).toFixed(0)}K`,font:{size:9}}}}}
-    });
+    if(chartType==='pie'){
+      const vals=(pieMetric==='budget'?bgtV:actV).map(v=>Math.max(v,0));
+      chartRef.current=new Chart(canvasRef.current.getContext('2d'),{
+        type:'doughnut',
+        data:{
+          labels:cats.map(c=>dispCat(c)),
+          datasets:[{data:vals,backgroundColor:cols.map(c=>c+'cc'),borderColor:cols,borderWidth:2,hoverOffset:10}]
+        },
+        options:{
+          responsive:true,maintainAspectRatio:false,cutout:'52%',
+          layout:{padding:{right:8}},
+          plugins:{
+            legend:{
+              position:'left',
+              align:'center',
+              labels:{boxWidth:14,font:{size:11},padding:10,
+                generateLabels:chart=>{
+                  const ds=chart.data.datasets[0];
+                  const tot=ds.data.reduce((a,b)=>a+b,0);
+                  return chart.data.labels.map((l,i)=>({
+                    text:l+'  '+(tot>0?Math.round(ds.data[i]/tot*100)+'%':''),
+                    fillStyle:ds.backgroundColor[i],strokeStyle:ds.borderColor[i],lineWidth:1,index:i,hidden:false
+                  }));
+                }
+              }
+            },
+            tooltip:{callbacks:{label:ctx=>{
+              const v=ctx.parsed;
+              const tot=ctx.dataset.data.reduce((a,b)=>a+b,0);
+              const p=tot>0?Math.round(v/tot*100):0;
+              return ' '+fmtRaw(v)+'  ('+p+'%)';
+            }}}
+          }
+        },
+        plugins:[{
+          id:'sliceLabels',
+          afterDraw(chart){
+            if(!showSliceLabels)return;
+            const ctx=chart.ctx;
+            const ds=chart.data.datasets[0];
+            const tot=ds.data.reduce((a,b)=>a+b,0);
+            const meta=chart.getDatasetMeta(0);
+            meta.data.forEach((el,i)=>{
+              const val=ds.data[i];
+              const pct=tot>0?Math.round(val/tot*100):0;
+              if(pct<3)return;
+              const {x,y}=el.getCenterPoint();
+              ctx.save();
+              ctx.textAlign='center';ctx.textBaseline='middle';
+              ctx.shadowColor='rgba(0,0,0,0.5)';ctx.shadowBlur=4;
+              ctx.font='bold 12px sans-serif';ctx.fillStyle='#fff';
+              const label=chart.data.labels[i];
+              const short=label.length>14?label.slice(0,13)+'…':label;
+              ctx.fillText(short,x,y-7);
+              ctx.font='bold 11px sans-serif';
+              ctx.fillText(pct+'%',x,y+7);
+              ctx.restore();
+            });
+          }
+        }]
+      });
+    }else{
+      chartRef.current=new Chart(canvasRef.current.getContext('2d'),{
+        type:'bar',
+        data:{
+          labels:cats.map(c=>{const n=dispCat(c);return n.length>22?n.slice(0,22)+'…':n;}),
+          datasets:[
+            {label:'Budget',data:bgtV,backgroundColor:cols.map(c=>c+'33'),borderColor:cols,borderWidth:2,borderRadius:4},
+            {label:'Actual',data:actV,backgroundColor:cols.map(c=>c+'99'),borderRadius:4},
+          ]
+        },
+        options:{responsive:true,maintainAspectRatio:false,
+          plugins:{legend:{position:'top',labels:{boxWidth:12,font:{size:10}}}},
+          scales:{x:{grid:{display:false},ticks:{font:{size:9}}},y:{grid:{color:'#f0f0f6'},ticks:{callback:v=>`$${(v/1e3).toFixed(0)}K`,font:{size:9}}}}}
+      });
+    }
     return()=>{if(chartRef.current)chartRef.current.destroy();};
-  },[acts,years]);
+  },[acts,years,chartType,pieMetric,selectedCats,showSliceLabels]);
   const byYear=years.map(y=>({y,b:sum(active.map(a=>yBgt(a.years[y]))),a:sum(active.map(a=>yAct(a.years[y])))}));
+  const isAllSel=selectedCats===null||selectedCats.length===allCats.length;
   return(
     <div className="space-y-5">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1719,8 +1958,70 @@ function Dashboard({acts,years}){
         );})}
       </div>
       <div className="bg-white rounded-2xl p-5 shadow-sm">
-        <h3 className="font-bold text-gray-800 mb-4">Budget vs. Actual by Category</h3>
-        <div style={{height:260}}><canvas ref={canvasRef}/></div>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <h3 className="font-bold text-gray-800">Budget vs. Actual by Category</h3>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-bold">
+              <button onClick={()=>setChartType('bar')}
+                className="px-3 py-1.5 transition-colors"
+                style={{background:chartType==='bar'?NAVY:'white',color:chartType==='bar'?'white':'#6b7280'}}>
+                ▮▮ Bar
+              </button>
+              <button onClick={()=>setChartType('pie')}
+                className="px-3 py-1.5 transition-colors border-l border-gray-200"
+                style={{background:chartType==='pie'?PURPLE:'white',color:chartType==='pie'?'white':'#6b7280'}}>
+                ● Pie
+              </button>
+            </div>
+            {chartType==='pie'&&(
+              <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-bold">
+                <button onClick={()=>setPieMetric('budget')}
+                  className="px-3 py-1.5 transition-colors"
+                  style={{background:pieMetric==='budget'?'#2563eb':'white',color:pieMetric==='budget'?'white':'#6b7280'}}>
+                  Budget
+                </button>
+                <button onClick={()=>setPieMetric('actual')}
+                  className="px-3 py-1.5 transition-colors border-l border-gray-200"
+                  style={{background:pieMetric==='actual'?'#16a34a':'white',color:pieMetric==='actual'?'white':'#6b7280'}}>
+                  Actual
+                </button>
+              </div>
+            )}
+            {chartType==='pie'&&(
+              <button onClick={()=>setShowSliceLabels(v=>!v)}
+                className="px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors"
+                style={{borderColor:'#d1d5db',background:showSliceLabels?'#7c3aed':'white',color:showSliceLabels?'white':'#6b7280'}}>
+                🏷️ Slice labels
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1.5 mb-4 items-center">
+          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider" style={{marginRight:2}}>Categories:</span>
+          <button onClick={selectAll}
+            className="px-2.5 py-1 rounded-full text-xs font-bold border transition-all"
+            style={{background:isAllSel?NAVY:'white',color:isAllSel?'white':'#6b7280',borderColor:isAllSel?NAVY:'#e5e7eb'}}>
+            All
+          </button>
+          {allCats.map(c=>{
+            const sel=selectedCats===null||selectedCats.includes(c);
+            const col=cc(c);
+            const lbl=dispCat(c);
+            return(
+              <button key={c} onClick={()=>toggleCat(c)}
+                className="px-2.5 py-1 rounded-full text-xs border transition-all"
+                style={{
+                  background:sel?col+'22':'white',
+                  color:sel?col:'#9ca3af',
+                  borderColor:sel?col:'#e5e7eb',
+                  fontWeight:sel?700:400,
+                }}>
+                {lbl.length>22?lbl.slice(0,22)+'…':lbl}
+              </button>
+            );
+          })}
+        </div>
+        <div style={{height:chartType==='pie'?300:260}}><canvas ref={canvasRef}/></div>
       </div>
     </div>
   );
@@ -1730,12 +2031,19 @@ function Dashboard({acts,years}){
    compact=true  → 3 cols per year (Budget, Actual, Var)  — fits on screen
    compact=false → 11 cols per year (Q1B Q1A … FY Bgt FY Act Var) — full detail
 */
-function BudgetTable({acts,years,hiddenYears,compact,onUpdate,onEdit,onDelete,onToggleDD,onToggleActive,onUpdateActivity,onAddInCategory,onMove,onReorder}){
+function BudgetTable({acts,years,hiddenYears,excludedFromTotal,compact,onUpdate,onEdit,onDelete,onToggleDD,onToggleActive,onUpdateActivity,onAddInCategory,onMove,onReorder,catOrder,catNames,customCats,catColors,onMoveCat,onReorderCat,onRenameCat,onDeleteCat,onSetCatColor}){
   const[expandedCRO,setExpandedCRO]=useState({});
   const[dragId,setDragId]=useState(null);
   const[dragOverId,setDragOverId]=useState(null);
   const visYears=years.filter(y=>!hiddenYears.includes(y));
-  const cats=[...new Set(acts.map(a=>a.category))];
+  const totalYears=visYears.filter(y=>!(excludedFromTotal||[]).includes(y));
+  const[catDragId,setCatDragId]=useState(null);
+  const[catDragOverId,setCatDragOverId]=useState(null);
+  const[catEditId,setCatEditId]=useState(null);
+  const dc=cat=>(catNames&&catNames[cat])||cat;
+  const cc=cat=>(catColors&&catColors[cat])||CAT_COLORS[cat]||NAVY;
+  const allActCats=[...new Set(acts.map(a=>a.category))];
+  const cats=(catOrder||allActCats).filter(c2=>acts.some(a=>a.category===c2)||(customCats||[]).includes(c2));
   const toggleCRO=id=>setExpandedCRO(e=>({...e,[id]:!e[id]}));
   // Helper: is this act the first/last in its category?
   const catPos=(id)=>{const cat=acts.find(a=>a.id===id)?.category;const ca=acts.filter(a=>a.category===cat);const i=ca.findIndex(a=>a.id===id);return{isFirst:i===0,isLast:i===ca.length-1};};
@@ -1759,7 +2067,7 @@ function BudgetTable({acts,years,hiddenYears,compact,onUpdate,onEdit,onDelete,on
               {visYears.map(y=>(
                 <th key={y} className="py-3 px-2 text-white/80 font-bold text-center" colSpan={compact?3:11} style={{borderLeft:'4px solid rgba(255,255,255,0.45)',background:'rgba(255,255,255,0.07)'}}>FY{y}</th>
               ))}
-              <th className="py-3 px-2 font-bold text-center text-yellow-200 text-xs" rowSpan={2} style={{borderLeft:'2px solid rgba(255,255,255,0.25)',background:'rgba(255,255,255,0.08)',minWidth:100}}>Total<br/>All Years</th>
+              <th className="py-3 px-2 font-bold text-center text-yellow-200 text-xs" rowSpan={2} style={{borderLeft:'2px solid rgba(255,255,255,0.25)',background:'rgba(255,255,255,0.08)',minWidth:100}}>Total<br/>Sel. Years</th>
               <th className="py-3 px-2 text-white/50 text-center w-16 text-xs" rowSpan={2}>⋯</th>
             </tr>
             <tr style={{background:NAVY+'cc'}}>
@@ -1792,7 +2100,36 @@ function BudgetTable({acts,years,hiddenYears,compact,onUpdate,onEdit,onDelete,on
               const cActive=cActs.filter(a=>a.activeInBudget);
               return(
                 <React.Fragment key={cat}>
-                  <tr className="cat-row"><td colSpan={fixedCols+yrCols+2} style={{background:cc(cat)+'ee'}}>{cat}</td></tr>
+                  <tr className="cat-row" draggable
+                    onDragStart={e=>{setCatDragId(cat);e.dataTransfer.effectAllowed='move';e.stopPropagation();}}
+                    onDragOver={e=>{e.preventDefault();e.stopPropagation();if(cat!==catDragId)setCatDragOverId(cat);}}
+                    onDrop={e=>{e.preventDefault();e.stopPropagation();if(catDragId&&cat!==catDragId)onReorderCat(catDragId,cat);setCatDragId(null);setCatDragOverId(null);}}
+                    onDragEnd={()=>{setCatDragId(null);setCatDragOverId(null);}}
+                    style={{opacity:catDragId===cat?0.45:1,outline:catDragOverId===cat?'2px solid white':'none',outlineOffset:'-2px'}}
+                  >
+                    <td colSpan={fixedCols+yrCols+2} style={{background:cc(cat)+'ee',padding:0}}>
+                      <div style={{display:'flex',alignItems:'center',padding:'5px 8px',gap:5}}>
+                        <span style={{cursor:'grab',fontSize:14,opacity:0.7,userSelect:'none',lineHeight:1}}>⠇</span>
+                        <span style={{display:'flex',gap:2,alignItems:'center'}}>
+                          <button title="Rename" onClick={e=>{e.stopPropagation();setCatEditId(cat);}} style={{background:'rgba(255,255,255,0.15)',border:'none',color:'white',borderRadius:3,cursor:'pointer',padding:'0 5px',fontSize:11,lineHeight:'16px'}}>✏</button>
+                          <button onClick={e=>{e.stopPropagation();onMoveCat(cat,-1);}} style={{background:'rgba(255,255,255,0.15)',border:'none',color:'white',borderRadius:3,cursor:'pointer',padding:'0 4px',fontSize:10,lineHeight:'16px'}} title="Move up">▲</button>
+                          <button onClick={e=>{e.stopPropagation();onMoveCat(cat,1);}} style={{background:'rgba(255,255,255,0.15)',border:'none',color:'white',borderRadius:3,cursor:'pointer',padding:'0 4px',fontSize:10,lineHeight:'16px'}} title="Move down">▼</button>
+                          <button title="Delete category" onClick={e=>{e.stopPropagation();onDeleteCat(cat);}} style={{background:'rgba(255,80,80,0.25)',border:'none',color:'rgba(255,180,180,0.9)',borderRadius:3,cursor:'pointer',padding:'0 5px',fontSize:11,lineHeight:'16px'}}>✕</button>
+                        </span>
+                        <label title="Change color" style={{position:'relative',cursor:'pointer',display:'inline-flex',alignItems:'center',flexShrink:0,marginRight:2}} onClick={e=>e.stopPropagation()}>
+                          <span style={{width:11,height:11,borderRadius:'50%',background:cc(cat),border:'2px solid rgba(255,255,255,0.55)',display:'inline-block',pointerEvents:'none'}}/>
+                          <input type="color" value={cc(cat)} onChange={e=>onSetCatColor(cat,e.target.value)} style={{position:'absolute',inset:0,opacity:0,width:'100%',height:'100%',cursor:'pointer',border:'none',padding:0}}/>
+                        </label>
+                        {catEditId===cat
+                          ?<input autoFocus defaultValue={dc(cat)}
+                              onBlur={e=>{onRenameCat(cat,e.target.value);setCatEditId(null);}}
+                              onKeyDown={e=>{if(e.key==='Enter')e.target.blur();if(e.key==='Escape')setCatEditId(null);}}
+                              style={{flex:1,background:'transparent',color:'white',border:'none',borderBottom:'1px solid rgba(255,255,255,0.5)',outline:'none',fontWeight:800,fontSize:10,letterSpacing:'.1em',textTransform:'uppercase',minWidth:0}}/>
+                          :<span style={{flex:1}}>{dc(cat)}</span>
+                        }
+                      </div>
+                    </td>
+                  </tr>
                   {cActs.map(act=>{
                     const isCROOpen=expandedCRO[act.id];
                     return(
@@ -1860,9 +2197,9 @@ function BudgetTable({acts,years,hiddenYears,compact,onUpdate,onEdit,onDelete,on
                           }
                           {/* Total All Years — effective = actuals if entered, else budget */}
                           {(()=>{
-                            const allEff=sum(years.map(y=>{const yd=act.years[y]||{};const a=yAct(yd);return a>0?a:yBgt(yd);}));
-                            const allB=sum(years.map(y=>yBgt(act.years[y])));
-                            const hasAct=years.some(y=>yAct(act.years[y])>0);
+                            const allEff=sum(totalYears.map(y=>{const yd=act.years[y]||{};const a=yAct(yd);return a>0?a:yBgt(yd);}));
+                            const allB=sum(totalYears.map(y=>effBgt(act,y)));
+                            const hasAct=totalYears.some(y=>yAct(act.years[y])>0);
                             return(
                               <td className="text-right px-2 py-1.5 font-bold border-l-2 border-yellow-200" style={{background:'#fefce8',color:'#92400e',minWidth:100}}>
                                 {allEff>0?fmt$(allEff):<span className="text-gray-200">—</span>}
@@ -1879,7 +2216,7 @@ function BudgetTable({acts,years,hiddenYears,compact,onUpdate,onEdit,onDelete,on
                         </tr>
                         {isCROOpen&&(
                           <tr><td colSpan={fixedCols+yrCols+2} className="p-0 border-b-2 border-indigo-100">
-                            <CROSection activity={act} onUpdateActivity={na=>onUpdateActivity(na)}/>
+                            <CROSection activity={act} years={years} onUpdateActivity={na=>onUpdateActivity(na)}/>
                           </td></tr>
                         )}
                       </React.Fragment>
@@ -1889,22 +2226,22 @@ function BudgetTable({acts,years,hiddenYears,compact,onUpdate,onEdit,onDelete,on
                   <tr>
                     <td colSpan={fixedCols+yrCols+2} className="py-1.5 px-4 bg-gray-50/60">
                       <button onClick={()=>onAddInCategory(cat)} className="text-xs text-indigo-500 hover:text-indigo-700 border border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 rounded-lg px-3 py-1 transition-colors">
-                        + Add activity to {cat.split(' (')[0].split(' ').slice(0,4).join(' ')}
+                        + Add activity
                       </button>
                     </td>
                   </tr>
                   {/* Category total */}
                   <tr className="total-row border-b-2 border-white">
-                    <td colSpan={fixedCols} className="sticky1 py-2 px-3 text-indigo-800 font-bold">{cat.split(' ')[0]} — Total</td>
+                    <td colSpan={fixedCols} className="sticky1 py-2 px-3 text-indigo-800 font-bold">{dc(cat)} — Total</td>
                     {compact
                       ? visYears.map(y=>{
-                          const fb=sum(cActive.map(a=>yBgt(a.years[y]))),fa=sum(cActive.map(a=>yAct(a.years[y])));
+                          const fb=sum(cActive.map(a=>actYBgt(a,y))),fa=sum(cActive.map(a=>yAct(a.years[y])));
                           return<React.Fragment key={y}><td className="bgt-cell yr-sep text-right px-2 py-2 font-bold text-blue-800">{fmt$(fb)}</td><td className="act-cell text-right px-2 py-2 font-bold text-green-700">{fmt$(fa)}</td><VarTd b={fb} a={fa}/></React.Fragment>;
                         })
                       : visYears.map(y=>{
                           const qB=q=>sum(cActive.map(a=>(a.years[y]||{})[q+'b']||0));
                           const qA=q=>sum(cActive.map(a=>(a.years[y]||{})[q+'a']||0));
-                          const fb=sum(cActive.map(a=>yBgt(a.years[y]))),fa=sum(cActive.map(a=>yAct(a.years[y])));
+                          const fb=sum(cActive.map(a=>actYBgt(a,y))),fa=sum(cActive.map(a=>yAct(a.years[y])));
                           return(
                             <React.Fragment key={y}>
                               {['q1','q2','q3','q4'].map(q=><React.Fragment key={q}><td className={`bgt-cell${q==='q1'?' yr-sep':''} text-right px-2 py-2`}>{fmt$(qB(q))}</td><td className="act-cell text-right px-2 py-2">{fmt$(qA(q))}</td></React.Fragment>)}
@@ -1917,9 +2254,9 @@ function BudgetTable({acts,years,hiddenYears,compact,onUpdate,onEdit,onDelete,on
                     }
                     {/* Category total — all years, effective */}
                     {(()=>{
-                      const allB=sum(cActive.map(a=>sum(years.map(y=>yBgt(a.years[y])))));
-                      const allEff=sum(cActive.map(a=>sum(years.map(y=>{const yd=a.years[y]||{};const ac=yAct(yd);return ac>0?ac:yBgt(yd);}))));
-                      const hasAct=cActive.some(a=>years.some(y=>yAct(a.years[y])>0));
+                      const allB=sum(cActive.map(a=>sum(totalYears.map(y=>effBgt(a,y)))));
+                      const allEff=sum(cActive.map(a=>sum(totalYears.map(y=>{const yd=a.years[y]||{};const ac=yAct(yd);return ac>0?ac:yBgt(yd);}))));
+                      const hasAct=cActive.some(a=>totalYears.some(y=>yAct(a.years[y])>0));
                       return<td className="text-right px-2 py-2 font-bold border-l-2 border-yellow-200" style={{background:'#fefce8',color:'#92400e'}}>{fmt$(allEff)}{hasAct&&<span className="block font-normal text-orange-400" style={{fontSize:'9px'}}>bgt: {fmt$(allB)}</span>}</td>;
                     })()}
                     <td/>
@@ -1930,37 +2267,37 @@ function BudgetTable({acts,years,hiddenYears,compact,onUpdate,onEdit,onDelete,on
             {/* Grand total */}
             {(()=>{
               const active=acts.filter(a=>a.activeInBudget);
-              const grandTotalBgt=sum(active.map(a=>sum(years.map(y=>yBgt(a.years[y])))));
-              const grandTotalAct=sum(active.map(a=>sum(years.map(y=>yAct(a.years[y])))));
-              const grandTotalEff=sum(active.map(a=>sum(years.map(y=>{const yd=a.years[y]||{};const ac=yAct(yd);return ac>0?ac:yBgt(yd);}))));
+              const grandTotalBgt=sum(active.map(a=>sum(totalYears.map(y=>effBgt(a,y)))));
+              const grandTotalAct=sum(active.map(a=>sum(totalYears.map(y=>yAct(a.years[y])))));
+              const grandTotalEff=sum(active.map(a=>sum(totalYears.map(y=>{const yd=a.years[y]||{};const ac=yAct(yd);return ac>0?ac:yBgt(yd);}))));
               return(
                 <tr className="grand-row">
                   <td colSpan={fixedCols} className="sticky1 py-3 px-3" style={{background:NAVY}}>TOTAL PROGRAMME</td>
                   {compact
                     ? visYears.map(y=>{
-                        const fb=sum(active.map(a=>yBgt(a.years[y]))),fa=sum(active.map(a=>yAct(a.years[y])));
+                        const fb=sum(active.map(a=>actYBgt(a,y))),fa=sum(active.map(a=>yAct(a.years[y])));
                         const v=r(fb-fa);
-                        return<React.Fragment key={y}><td className="yr-sep text-right px-2 py-3 font-black" style={{background:'#ffffff15'}}>{fmt$(fb)}</td><td className="text-right px-2 py-3 font-black" style={{background:'#22c55e22'}}>{fmt$(fa)}</td><td className={`text-right px-2 py-3 font-black ${v>=0?'text-green-300':'text-red-300'}`}>{v>=0?'+':''}{fmt$(v)}</td></React.Fragment>;
+                        return<React.Fragment key={y}><td className="yr-sep text-right px-2 py-3 font-black" style={{color:'#93c5fd'}}>{fmt$(fb)}</td><td className="text-right px-2 py-3 font-black" style={{color:'#c4b5fd'}}>{fmt$(fa)}</td><td className="text-right px-2 py-3 font-black" style={{color:v>=0?'#4ade80':'#f87171'}}>{v>=0?'+':''}{fmt$(v)}</td></React.Fragment>;
                       })
                     : visYears.map(y=>{
                         const qB=q=>sum(active.map(a=>(a.years[y]||{})[q+'b']||0));
                         const qA=q=>sum(active.map(a=>(a.years[y]||{})[q+'a']||0));
-                        const fb=sum(active.map(a=>yBgt(a.years[y]))),fa=sum(active.map(a=>yAct(a.years[y])));
+                        const fb=sum(active.map(a=>actYBgt(a,y))),fa=sum(active.map(a=>yAct(a.years[y])));
                         const v=r(fb-fa);
                         return(
                           <React.Fragment key={y}>
-                            {['q1','q2','q3','q4'].map(q=><React.Fragment key={q}><td className={`${q==='q1'?'yr-sep ':''}text-right px-2 py-3 font-bold`} style={{background:'#ffffff15'}}>{fmt$(qB(q))}</td><td className="text-right px-2 py-3 font-bold" style={{background:'#22c55e22'}}>{fmt$(qA(q))}</td></React.Fragment>)}
-                            <td className="text-right px-2 py-3 font-black" style={{borderLeft:'3px solid #93c5fd',background:'rgba(147,197,253,0.2)'}}>{fmt$(fb)}</td>
-                            <td className="text-right px-2 py-3 font-black" style={{background:'rgba(110,231,183,0.2)'}}>{fmt$(fa)}</td>
-                            <td className={`text-right px-2 py-3 font-black ${v>=0?'text-green-300':'text-red-300'}`}>{v>=0?'+':''}{fmt$(v)}</td>
+                            {['q1','q2','q3','q4'].map(q=><React.Fragment key={q}><td className={`${q==='q1'?'yr-sep ':''}text-right px-2 py-3 font-bold`} style={{color:'#93c5fd'}}>{fmt$(qB(q))}</td><td className="text-right px-2 py-3 font-bold" style={{color:'#c4b5fd'}}>{fmt$(qA(q))}</td></React.Fragment>)}
+                            <td className="text-right px-2 py-3 font-black" style={{borderLeft:'3px solid #93c5fd',color:'#93c5fd'}}>{fmt$(fb)}</td>
+                            <td className="text-right px-2 py-3 font-black" style={{color:'#c4b5fd'}}>{fmt$(fa)}</td>
+                            <td className="text-right px-2 py-3 font-black" style={{color:v>=0?'#4ade80':'#f87171'}}>{v>=0?'+':''}{fmt$(v)}</td>
                           </React.Fragment>
                         );
                       })
                   }
                   {/* Grand Total All Years — effective (actuals where entered, budget otherwise) */}
-                  <td className="text-right px-3 py-3 font-black border-l-2 border-yellow-400/40" style={{background:'rgba(234,179,8,0.2)',color:'#fde68a',minWidth:100,fontSize:'13px'}}>
+                  <td className="text-right px-3 py-3 font-black border-l-2 border-yellow-400/60" style={{color:'#fcd34d',minWidth:100,fontSize:'13px'}}>
                     {fmtK(grandTotalEff)}
-                    <span className="block font-normal text-yellow-300/70" style={{fontSize:'9px'}}>bgt: {fmtK(grandTotalBgt)}</span>
+                    <span className="block font-normal" style={{fontSize:'9px',color:'rgba(253,211,77,0.65)'}}>bgt: {fmtK(grandTotalBgt)}</span>
                   </td>
                   <td/>
                 </tr>
@@ -2210,12 +2547,36 @@ function CashFlowPanel({acts,years,visYears,contributions,openingBalance,opening
 }
 
 /* ══ PROGRAMME TOTAL ══ */
-function ProgrammeTotal({acts,years}){
+function ProgrammeTotal({acts,years,catNames,catOrder}){
+  const[hiddenPTYears,setHiddenPTYears]=React.useState([]);
+  const visYears=years.filter(y=>!hiddenPTYears.includes(y));
+  const togglePTYear=y=>setHiddenPTYears(h=>h.includes(y)?h.filter(x=>x!==y):[...h,y]);
   const active=acts.filter(a=>a.activeInBudget);
-  const cats=[...new Set(acts.map(a=>a.category))];
-  const allB=a=>sum(years.map(y=>yBgt(a.years[y])));
-  const allA=a=>sum(years.map(y=>yAct(a.years[y])));
+  const allCatKeys=[...new Set(acts.map(a=>a.category))];
+  const cats=catOrder?catOrder.filter(c=>allCatKeys.includes(c)):[...allCatKeys];
+  const dispCat=c=>(catNames&&catNames[c])||c;
+  const allB=a=>sum(visYears.map(y=>effBgt(a,y)));
+  const allA=a=>sum(visYears.map(y=>yAct(a.years[y])));
   return(
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Years:</span>
+        {years.map(y=>(
+          <button key={y} onClick={()=>togglePTYear(y)}
+            className="px-3 py-1 rounded-full text-xs font-bold border-2 transition-all"
+            style={hiddenPTYears.includes(y)
+              ?{background:'#f3f4f6',color:'#9ca3af',borderColor:'#e5e7eb'}
+              :{background:NAVY,color:'white',borderColor:NAVY}}>
+            FY{y}
+          </button>
+        ))}
+        {hiddenPTYears.length>0&&(
+          <button onClick={()=>setHiddenPTYears([])}
+            className="px-2 py-0.5 rounded text-xs text-indigo-600 font-bold hover:underline">
+            Show all
+          </button>
+        )}
+      </div>
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-xs" style={{minWidth:700}}>
@@ -2224,11 +2585,11 @@ function ProgrammeTotal({acts,years}){
               <th className="sticky1 py-3 px-2 text-white w-8" rowSpan={2}>Σ</th>
               <th className="py-3 px-3 text-white text-left min-w-64 font-bold" rowSpan={2}>Activity</th>
               <th className="py-3 px-2 text-white/70 text-center" rowSpan={2}>Status</th>
-              {years.map(y=><th key={y} className="py-3 px-2 text-white/80 font-bold text-center" colSpan={2}>FY{y}</th>)}
-              <th className="py-3 px-2 text-white font-bold text-center" colSpan={3} style={{background:'rgba(255,255,255,.15)'}}>TOTAL {years.join('+')}</th>
+              {visYears.map(y=><th key={y} className="py-3 px-2 text-white/80 font-bold text-center" colSpan={2}>FY{y}</th>)}
+              <th className="py-3 px-2 text-white font-bold text-center" colSpan={3} style={{background:'rgba(255,255,255,.15)'}}>TOTAL {visYears.join('+')}</th>
             </tr>
             <tr style={{background:NAVY+'cc'}}>
-              {years.map(y=><React.Fragment key={y}><th className="py-1.5 px-2 text-blue-200 text-center">Budget</th><th className="py-1.5 px-2 text-green-200 text-center">Actual</th></React.Fragment>)}
+              {visYears.map(y=><React.Fragment key={y}><th className="py-1.5 px-2 text-blue-200 text-center">Budget</th><th className="py-1.5 px-2 text-green-200 text-center">Actual</th></React.Fragment>)}
               <th className="py-1.5 px-2 text-white/70 text-center">Budget</th>
               <th className="py-1.5 px-2 text-white/70 text-center">Actual</th>
               <th className="py-1.5 px-2 text-white/70 text-center">Variance</th>
@@ -2240,15 +2601,15 @@ function ProgrammeTotal({acts,years}){
               const cActive=cActs.filter(a=>a.activeInBudget);
               return(
                 <React.Fragment key={cat}>
-                  <tr className="cat-row"><td colSpan={3+years.length*2+3} style={{background:cc(cat)+'ee'}}>{cat}</td></tr>
+                  <tr className="cat-row"><td colSpan={3+visYears.length*2+3} style={{background:cc(cat)+'ee'}}>{dispCat(cat)}</td></tr>
                   {cActs.map(act=>(
                     <tr key={act.id} className={`act-row border-b border-gray-50 ${!act.activeInBudget?'inactive-row':''}`}>
                       <td className="sticky1 text-center py-1.5"><span className={`inline-flex items-center justify-center w-5 h-5 rounded text-xs font-black ${act.activeInBudget?'bg-green-500 text-white':'bg-gray-200 text-gray-400'}`}>{act.activeInBudget?'✓':'○'}</span></td>
                       <td className="py-1.5 px-3 font-medium text-gray-800">{act.name}</td>
                       <td className="py-1.5 px-2 text-center"><span className={`px-1.5 py-0.5 rounded text-xs border font-semibold ${csClass(act.commitmentStatus)}`}>{act.commitmentStatus}</span></td>
-                      {years.map(y=>(
+                      {visYears.map(y=>(
                         <React.Fragment key={y}>
-                          <td className="bgt-cell text-right px-2 py-1.5">{fmt$(yBgt(act.years[y]))}</td>
+                          <td className="bgt-cell text-right px-2 py-1.5">{fmt$(actYBgt(act,y))}</td>
                           <td className="act-cell text-right px-2 py-1.5">{fmt$(yAct(act.years[y]))}</td>
                         </React.Fragment>
                       ))}
@@ -2258,10 +2619,10 @@ function ProgrammeTotal({acts,years}){
                     </tr>
                   ))}
                   <tr className="total-row border-b-2 border-white">
-                    <td colSpan={3} className="sticky1 py-2 px-3 text-indigo-800">{cat.split(' ')[0]} — Total</td>
-                    {years.map(y=>(
+                    <td colSpan={3} className="sticky1 py-2 px-3 text-indigo-800">{dispCat(cat)} — Total</td>
+                    {visYears.map(y=>(
                       <React.Fragment key={y}>
-                        <td className="bgt-cell text-right px-2 py-2">{fmt$(sum(cActive.map(a=>yBgt(a.years[y]))))}</td>
+                        <td className="bgt-cell text-right px-2 py-2">{fmt$(sum(cActive.map(a=>effBgt(a,y))))}</td>
                         <td className="act-cell text-right px-2 py-2">{fmt$(sum(cActive.map(a=>yAct(a.years[y]))))}</td>
                       </React.Fragment>
                     ))}
@@ -2275,47 +2636,73 @@ function ProgrammeTotal({acts,years}){
             {(()=>{const aA=acts.filter(a=>a.activeInBudget);const tb=sum(aA.map(allB));const ta=sum(aA.map(allA));const tv=r(tb-ta);return(
               <tr className="grand-row">
                 <td colSpan={3} className="sticky1 py-3 px-3" style={{background:NAVY}}>TOTAL PROGRAMME</td>
-                {years.map(y=>(
+                {visYears.map(y=>(
                   <React.Fragment key={y}>
-                    <td className="text-right px-2 py-3 font-black" style={{background:'#ffffff15'}}>{fmt$(sum(aA.map(a=>yBgt(a.years[y]))))}</td>
-                    <td className="text-right px-2 py-3 font-black" style={{background:'#22c55e22'}}>{fmt$(sum(aA.map(a=>yAct(a.years[y]))))}</td>
+                    <td className="text-right px-2 py-3 font-black" style={{color:'#93c5fd'}}>{fmt$(sum(aA.map(a=>effBgt(a,y))))}</td>
+                    <td className="text-right px-2 py-3 font-black" style={{color:'#c4b5fd'}}>{fmt$(sum(aA.map(a=>yAct(a.years[y]))))}</td>
                   </React.Fragment>
                 ))}
-                <td className="text-right px-2 py-3 font-black">{fmt$(tb)}</td>
-                <td className="text-right px-2 py-3 font-black" style={{background:'#22c55e22'}}>{fmt$(ta)}</td>
-                <td className={`text-right px-2 py-3 font-black ${tv>=0?'text-green-300':'text-red-300'}`}>{tv>=0?'+':''}{fmt$(tv)}</td>
+                <td className="text-right px-2 py-3 font-black" style={{color:'#93c5fd'}}>{fmt$(tb)}</td>
+                <td className="text-right px-2 py-3 font-black" style={{color:'#c4b5fd'}}>{fmt$(ta)}</td>
+                <td className="text-right px-2 py-3 font-black" style={{color:tv>=0?'#4ade80':'#f87171'}}>{tv>=0?'+':''}{fmt$(tv)}</td>
               </tr>
             );})()}
           </tbody>
         </table>
       </div>
     </div>
+    </div>
   );
 }
 
 /* ══ TIMELINE / GANTT ══ */
 function TimelineTab({acts,years}){
-  const QW=84,LW=268,RH=34,CH=54;
-  const nQ=years.length*4;
-  const svgW=LW+nQ*QW;
+  const QW=84,YW=120,LW=268,RH=34,CH=54;
+  const[hideQtrs,setHideQtrs]=React.useState(false);
+  const[hiddenTlYears,setHiddenTlYears]=React.useState([]);
+  const toggleTlYear=yr=>setHiddenTlYears(prev=>prev.includes(yr)?prev.filter(y=>y!==yr):[...prev,yr]);
+  const visYears=years.filter(yr=>!hiddenTlYears.includes(yr));
+  const CW=hideQtrs?YW:QW;
+  const nCols=hideQtrs?visYears.length:visYears.length*4;
+  const svgW=LW+nCols*CW;
+  const xOfQtr=(yr,qi)=>{
+    const vyi=visYears.indexOf(yr);
+    if(vyi<0)return null;
+    return LW+(hideQtrs?vyi*YW:(vyi*4+qi)*QW);
+  };
   const now=new Date();
-  const nowYI=years.indexOf(String(now.getFullYear()));
+  const nowYr=String(now.getFullYear());
   const nowQI=Math.floor(now.getMonth()/3);
-  const nowIdx=nowYI>=0?nowYI*4+nowQI:-1;
+  const nowX=xOfQtr(nowYr,nowQI);
+  const nowXC=nowX!==null?nowX+CW/2:-1;
   const getSpan=act=>{
-    let first=-1,last=-1;
-    years.forEach((yr,yi)=>{
-      [0,1,2,3].forEach(qi=>{
-        const q='q'+(qi+1);
+    let x1=null,x2end=null;
+    years.forEach(yr=>{
+      if(hiddenTlYears.includes(yr))return;
+      if(hideQtrs){
         const d=act.years[yr]||{};
-        if((d[q+'b']||0)>0||(d[q+'a']||0)>0){
-          const idx=yi*4+qi;
-          if(first===-1)first=idx;
-          last=idx;
-        }
-      });
+        const hasData=[0,1,2,3].some(qi=>{const q='q'+(qi+1);return(d[q+'b']||0)>0||(d[q+'a']||0)>0;});
+        if(hasData){const x=xOfQtr(yr,0);if(x!==null){if(x1===null)x1=x;x2end=x+YW;}}
+      }else{
+        [0,1,2,3].forEach(qi=>{
+          const q='q'+(qi+1);
+          const d=act.years[yr]||{};
+          if((d[q+'b']||0)>0||(d[q+'a']||0)>0){
+            const x=xOfQtr(yr,qi);
+            if(x!==null){if(x1===null)x1=x;x2end=x+QW;}
+          }
+        });
+      }
     });
-    return{first,last};
+    return x1!==null?{x1,w:x2end-x1}:null;
+  };
+  const getBarBudget=act=>{
+    let total=0;
+    years.forEach(yr=>{
+      if(hiddenTlYears.includes(yr))return;
+      [0,1,2,3].forEach(qi=>{const q='q'+(qi+1);total+=(act.years[yr]||{})[q+'b']||0;});
+    });
+    return total;
   };
   const cats=[...new Set(acts.map(a=>a.category))];
   const rows=[];
@@ -2324,9 +2711,29 @@ function TimelineTab({acts,years}){
     acts.filter(a=>a.category===cat).forEach(act=>rows.push({type:'act',act}));
   });
   const svgH=CH+rows.length*RH+20;
-  const qLabels=years.flatMap((yr,yi)=>[0,1,2,3].map(qi=>({yr,q:qi+1,idx:yi*4+qi})));
   return(
     <div className="space-y-4">
+      <div className="bg-white rounded-2xl shadow-sm px-5 py-3 flex flex-wrap gap-2 items-center">
+        <span style={{fontSize:11,fontWeight:700,color:'#6b7280',marginRight:2}}>Show years:</span>
+        {years.map(yr=>(
+          <button key={yr} onClick={()=>toggleTlYear(yr)}
+            style={{fontSize:11,padding:'3px 10px',borderRadius:20,border:'1.5px solid',fontWeight:700,cursor:'pointer',
+              background:hiddenTlYears.includes(yr)?'#f3f4f6':NAVY,
+              color:hiddenTlYears.includes(yr)?'#6b7280':'white',
+              borderColor:hiddenTlYears.includes(yr)?'#d1d5db':NAVY,
+              opacity:hiddenTlYears.includes(yr)?0.6:1}}>
+            FY{yr}
+          </button>
+        ))}
+        <div style={{width:1,height:20,background:'#e5e7eb',margin:'0 4px'}}/>
+        <button onClick={()=>setHideQtrs(q=>!q)}
+          style={{fontSize:11,padding:'3px 12px',borderRadius:20,border:'1.5px solid',fontWeight:700,cursor:'pointer',
+            background:hideQtrs?'#f3f4f6':PURPLE,
+            color:hideQtrs?'#6b7280':'white',
+            borderColor:hideQtrs?'#d1d5db':PURPLE}}>
+          {hideQtrs?'Show Quarters':'Hide Quarters'}
+        </button>
+      </div>
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100">
           <h2 className="font-black text-gray-800 text-lg">Programme Timeline</h2>
@@ -2338,30 +2745,36 @@ function TimelineTab({acts,years}){
           </div>
         </div>
         <div style={{overflowX:'auto'}}>
+          {visYears.length===0?(
+            <div style={{padding:'48px 32px',textAlign:'center',color:'#9ca3af',fontSize:14}}>No years visible. Click year buttons above to show years.</div>
+          ):(
           <svg width={svgW} height={svgH} style={{display:'block',fontFamily:'Segoe UI,system-ui,sans-serif'}}>
-            {years.map((yr,yi)=>(
+            {visYears.map((yr,vyi)=>(
               <g key={yr}>
-                <rect x={LW+yi*4*QW} y={0} width={4*QW} height={CH/2} fill={yi%2===0?NAVY:PURPLE}/>
-                <text x={LW+yi*4*QW+2*QW} y={CH/4+6} textAnchor="middle" fill="white" fontSize={12} fontWeight="bold">FY{yr}</text>
+                <rect x={LW+(hideQtrs?vyi*YW:vyi*4*QW)} y={0} width={hideQtrs?YW:4*QW} height={hideQtrs?CH:CH/2} fill={vyi%2===0?NAVY:PURPLE}/>
+                <text x={LW+(hideQtrs?vyi*YW+YW/2:vyi*4*QW+2*QW)} y={hideQtrs?CH/2+4:CH/4+6} textAnchor="middle" fill="white" fontSize={12} fontWeight="bold">FY{yr}</text>
               </g>
             ))}
-            {qLabels.map(({yr,q,idx})=>(
-              <g key={`${yr}${q}`}>
-                <rect x={LW+idx*QW} y={CH/2} width={QW} height={CH/2} fill={idx%2===0?NAVY+'cc':NAVY+'99'}/>
-                <text x={LW+idx*QW+QW/2} y={CH*3/4+5} textAnchor="middle" fill="rgba(255,255,255,0.85)" fontSize={10} fontWeight="600">Q{q}</text>
-                <line x1={LW+idx*QW} y1={CH/2} x2={LW+idx*QW} y2={CH} stroke="rgba(255,255,255,0.2)" strokeWidth={1}/>
-              </g>
-            ))}
+            {!hideQtrs&&visYears.flatMap((yr,vyi)=>[0,1,2,3].map(qi=>{
+              const x=LW+(vyi*4+qi)*QW;
+              return(
+                <g key={yr+qi}>
+                  <rect x={x} y={CH/2} width={QW} height={CH/2} fill={(vyi*4+qi)%2===0?NAVY+'cc':NAVY+'99'}/>
+                  <text x={x+QW/2} y={CH*3/4+5} textAnchor="middle" fill="rgba(255,255,255,0.85)" fontSize={10} fontWeight="600">Q{qi+1}</text>
+                  <line x1={x} y1={CH/2} x2={x} y2={CH} stroke="rgba(255,255,255,0.2)" strokeWidth={1}/>
+                </g>
+              );
+            }))}
             <rect x={0} y={0} width={LW} height={CH} fill={NAVY}/>
             <text x={12} y={CH/2+5} fill="white" fontSize={11} fontWeight="bold">Activity</text>
-            {Array.from({length:nQ+1},(_,i)=>(
-              <line key={i} x1={LW+i*QW} y1={CH} x2={LW+i*QW} y2={svgH} stroke={i%4===0?'#d1d5db':'#f3f4f6'} strokeWidth={i%4===0?1.5:1}/>
+            {Array.from({length:nCols+1},(_,i)=>(
+              <line key={i} x1={LW+i*CW} y1={CH} x2={LW+i*CW} y2={svgH} stroke={(!hideQtrs&&i%4===0)||hideQtrs?'#d1d5db':'#f3f4f6'} strokeWidth={(!hideQtrs&&i%4===0)||hideQtrs?1.5:1}/>
             ))}
-            {nowIdx>=0&&(
+            {nowXC>0&&(
               <g>
-                <line x1={LW+nowIdx*QW+QW/2} y1={CH} x2={LW+nowIdx*QW+QW/2} y2={svgH} stroke="#ef4444" strokeWidth={1.5} strokeDasharray="4,3"/>
-                <rect x={LW+nowIdx*QW+QW/2-18} y={CH+2} width={36} height={13} fill="#ef4444" rx={3}/>
-                <text x={LW+nowIdx*QW+QW/2} y={CH+12} textAnchor="middle" fill="white" fontSize={8} fontWeight="bold">TODAY</text>
+                <line x1={nowXC} y1={CH} x2={nowXC} y2={svgH} stroke="#ef4444" strokeWidth={1.5} strokeDasharray="4,3"/>
+                <rect x={nowXC-18} y={CH+2} width={36} height={13} fill="#ef4444" rx={3}/>
+                <text x={nowXC} y={CH+12} textAnchor="middle" fill="white" fontSize={8} fontWeight="bold">TODAY</text>
               </g>
             )}
             {rows.map((row,i)=>{
@@ -2379,18 +2792,21 @@ function TimelineTab({acts,years}){
                   </g>
                 );
               }
-              const{first,last}=getSpan(row.act);
-              const hasBar=first>=0;
+              const span=getSpan(row.act);
               const barColor=cc(row.act.category);
               const isEven=i%2===0;
               const ssSpans=row.act.cros.flatMap(cro=>
                 cro.subStudies.filter(ss=>ss.startDate&&ss.endDate).map(ss=>{
                   const sd=new Date(ss.startDate+'T00:00:00');
                   const ed=new Date(ss.endDate+'T00:00:00');
-                  const sYI=years.indexOf(String(sd.getFullYear()));
-                  const eYI=years.indexOf(String(ed.getFullYear()));
-                  if(sYI<0||eYI<0)return null;
-                  return{sIdx:sYI*4+Math.floor(sd.getMonth()/3),eIdx:eYI*4+Math.floor(ed.getMonth()/3),id:ss.id};
+                  const sYr=String(sd.getFullYear());
+                  const eYr=String(ed.getFullYear());
+                  const sQi=Math.floor(sd.getMonth()/3);
+                  const eQi=Math.floor(ed.getMonth()/3);
+                  const sx=xOfQtr(sYr,hideQtrs?0:sQi);
+                  const ex=xOfQtr(eYr,hideQtrs?0:eQi);
+                  if(sx===null||ex===null)return null;
+                  return{x1:sx+2,w:Math.max(ex+CW-sx-4,4),id:ss.id};
                 }).filter(Boolean)
               );
               return(
@@ -2399,33 +2815,31 @@ function TimelineTab({acts,years}){
                   <text x={8} y={rowY+RH*0.62} fontSize={10} fill={row.act.activeInBudget?'#374151':'#9ca3af'}>
                     {row.act.name.length>36?row.act.name.slice(0,36)+'…':row.act.name}
                   </text>
-                  {hasBar&&(
+                  {span&&(
                     <g>
-                      <rect x={LW+first*QW+2} y={rowY+RH*0.2} width={(last-first+1)*QW-4} height={RH*0.52} rx={4} fill={barColor} opacity={row.act.activeInBudget?0.7:0.25}/>
-                      {(last-first+1)*QW>55&&(
-                        <text x={LW+first*QW+(last-first+1)*QW/2} y={rowY+RH*0.58} textAnchor="middle" fontSize={9} fill="white" fontWeight="bold">
-                          {fmtK(sum(years.flatMap((yr,yi)=>[0,1,2,3].map(qi=>{
-                            const idx=yi*4+qi;
-                            if(idx<first||idx>last)return 0;
-                            return(row.act.years[yr]||{})['q'+(qi+1)+'b']||0;
-                          }))))}
+                      <rect x={span.x1+2} y={rowY+RH*0.2} width={span.w-4} height={RH*0.52} rx={4} fill={barColor} opacity={row.act.activeInBudget?0.7:0.25}/>
+                      {span.w>55&&(
+                        <text x={span.x1+span.w/2} y={rowY+RH*0.58} textAnchor="middle" fontSize={9} fill="white" fontWeight="bold">
+                          {fmtK(getBarBudget(row.act))}
                         </text>
                       )}
                     </g>
                   )}
                   {ssSpans.map(s=>(
-                    <rect key={s.id} x={LW+s.sIdx*QW+2} y={rowY+RH*0.76} width={Math.max((s.eIdx-s.sIdx+1)*QW-4,4)} height={RH*0.16} rx={2} fill={barColor} opacity={0.9}/>
+                    <rect key={s.id} x={s.x1} y={rowY+RH*0.76} width={s.w} height={RH*0.16} rx={2} fill={barColor} opacity={0.9}/>
                   ))}
                   <line x1={0} y1={rowY+RH-1} x2={svgW} y2={rowY+RH-1} stroke="#f3f4f6" strokeWidth={1}/>
                 </g>
               );
             })}
           </svg>
+          )}
         </div>
       </div>
     </div>
   );
 }
+
 
 /* ══════════════════════════════════════════
    MAIN APP
@@ -2446,11 +2860,17 @@ function App(){
   const[syncStatus,setSyncStatus]=useState('idle');
   const[syncError,setSyncError]=useState('');
   const[lastSync,setLastSync]=useState(()=>{const s=localStorage.getItem('ariadne_lastsync');return s?new Date(s):null;});
+  const[lastRemoteSavedAt,setLastRemoteSavedAt]=useState(null);
+  const lrsaRef=useRef(null);
+  const setLRSA=v=>{lrsaRef.current=v;setLastRemoteSavedAt(v);};
   const[savedBy,setSavedBy]=useState(()=>localStorage.getItem('ariadne_savedby')||null);
   const[userName,setUserNameState]=useState(()=>localStorage.getItem('ariadne_username')||'');
   const setUserName=v=>{setUserNameState(v);localStorage.setItem('ariadne_username',v);};
   const[customStatuses,setCustomStatuses]=useState(()=>saved?.customStatuses||[]);
   const[hiddenYears,setHiddenYears]=useState([]);
+  const undoRef=useRef([]);
+  const[canUndo,setCanUndo]=useState(false);
+  const[scenarios,setScenarios]=useState(()=>saved?.scenarios||[]);
   const[tab,setTab]=useState('budget');
   const[modal,setModal]=useState(null);
   const[ddOnly,setDdOnly]=useState(false);
@@ -2458,17 +2878,28 @@ function App(){
   const[showCF,setShowCF]=useState(true);          // show cash flow panel
   const[cfInDD,setCfInDD]=useState(false);          // show cash flow in DD view
   const[defaultAddCat,setDefaultAddCat]=useState(ALL_CATS[0]);
+  const[catNames,setCatNames]=useState(()=>saved?.catNames||{});
+  const[customCats,setCustomCats]=useState(()=>saved?.customCats||[]);
+  const[catOrder,setCatOrder]=useState(()=>saved?.catOrder||null);
+  const[addCatModal,setAddCatModal]=useState(false);
+  const[newCatName,setNewCatName]=useState('');
+  const[catColors,setCatColors]=useState(()=>saved?.catColors||{});
 
   useEffect(()=>{
-    try{localStorage.setItem(SK,JSON.stringify({acts,years,contributions,openingBalance,openingBalanceYear,openingBalanceQtr,closingBalanceOverride,customStatuses}));}catch{}
-  },[acts,years,contributions,openingBalance,openingBalanceYear,openingBalanceQtr,closingBalanceOverride,customStatuses]);
+    try{localStorage.setItem(SK,JSON.stringify({acts,years,contributions,openingBalance,openingBalanceYear,openingBalanceQtr,closingBalanceOverride,customStatuses,catNames,customCats,catColors,catOrder,scenarios}));}catch{}
+  },[acts,years,contributions,openingBalance,openingBalanceYear,openingBalanceQtr,closingBalanceOverride,customStatuses,catNames,customCats,catColors,catOrder,scenarios]);
+  useEffect(()=>{
+    const handler=e=>{if((e.ctrlKey||e.metaKey)&&e.key==='z'&&!e.shiftKey){e.preventDefault();undo();}};
+    window.addEventListener('keydown',handler);
+    return()=>window.removeEventListener('keydown',handler);
+  },[acts,years,catOrder,catNames,customCats,catColors,contributions,openingBalance,openingBalanceYear,openingBalanceQtr]);
 
   const dispActs=ddOnly?acts.filter(a=>a.includeDD):acts;
 
   // Activities
   const addAct=a=>setActs(s=>[...s,a]);
   const editAct=a=>setActs(s=>s.map(x=>x.id===a.id?a:x));
-  const delAct=id=>setActs(s=>s.filter(a=>a.id!==id));
+  const delAct=id=>{pushUndo();setActs(s=>s.filter(a=>a.id!==id));};
   const toggleDD=id=>setActs(s=>s.map(a=>a.id===id?{...a,includeDD:!a.includeDD}:a));
   const toggleActive=id=>setActs(s=>s.map(a=>a.id===id?{...a,activeInBudget:!a.activeInBudget}:a));
   const moveAct=(id,dir)=>setActs(prev=>{
@@ -2494,6 +2925,41 @@ function App(){
   const updActivity=na=>setActs(s=>s.map(a=>a.id===na.id?na:a));
   const openAddForCat=cat=>{setDefaultAddCat(cat);setModal('add');};
 
+  const allCats=[...ALL_CATS,...customCats];
+  const dispCat=cat=>catNames[cat]||cat;
+  const renameCat=(oldN,newN)=>{const t=newN.trim();if(!t)return;setCatNames(m=>({...m,[oldN]:t}));};
+  const deleteCat=cat=>{
+    const n=catNames[cat]||cat;
+    const count=acts.filter(a=>a.category===cat).length;
+    const msg=count>0?`Delete "${n}" and its ${count} activit${count===1?'y':'ies'}? This cannot be undone.`:`Delete category "${n}"?`;
+    if(!window.confirm(msg))return;
+    pushUndo();
+    setActs(prev=>prev.filter(a=>a.category!==cat));
+    setCatOrder(o=>(o||allCats).filter(c=>c!==cat));
+    setCustomCats(prev=>prev.filter(c=>c!==cat));
+    setCatNames(m=>{const n={...m};delete n[cat];return n;});
+  };
+  const setCatColor=(cat,color)=>setCatColors(m=>({...m,[cat]:color}));
+  const addCat=n=>{
+    const t=n.trim();
+    if(!t)return;
+    if(allCats.map(x=>x.toLowerCase()).includes(t.toLowerCase())){alert('Category already exists.');return;}
+    const randColor=CAT_PALETTE[Math.floor(Math.random()*CAT_PALETTE.length)];
+    setCatColors(m=>({...m,[t]:randColor}));
+    setCustomCats(prev=>[...prev,t]);
+    setCatOrder(o=>[...(o||allCats),t]);
+    setAddCatModal(false);setNewCatName('');
+  };
+  const moveCat=(cat,dir)=>setCatOrder(o=>{
+    const arr=o||allCats;const i=arr.indexOf(cat);if(i<0)return arr;
+    const ni=i+dir;if(ni<0||ni>=arr.length)return arr;
+    const next=[...arr];[next[i],next[ni]]=[next[ni],next[i]];return next;
+  });
+  const reorderCat=(d,t)=>setCatOrder(o=>{
+    const arr=o||allCats;const next=arr.filter(x=>x!==d);
+    const ti=next.indexOf(t);next.splice(ti,0,d);return next;
+  });
+
   // Contributions
   const addContrib=c=>setContributions(s=>[...s,c]);
   const editContrib=c=>setContributions(s=>s.map(x=>x.id===c.id?c:x));
@@ -2501,15 +2967,170 @@ function App(){
 
   // Years
   const addNextYear=()=>{
+    pushUndo();
     const next=String(Math.max(...years.map(Number))+1);
     setYears(yy=>[...yy,next]);
     setActs(s=>s.map(a=>({...a,years:{...a.years,[next]:{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}})));
   };
   const nextYear=String(Math.max(...years.map(Number))+1);
   const toggleHideYear=y=>setHiddenYears(h=>h.includes(y)?h.filter(x=>x!==y):[...h,y]);
+  const[excludedFromTotal,setExcludedFromTotal]=useState([]);
+  const toggleExcludeFromTotal=y=>setExcludedFromTotal(h=>h.includes(y)?h.filter(x=>x!==y):[...h,y]);
+  const snapState=()=>({acts,years,catOrder,catNames,customCats,catColors,contributions,openingBalance,openingBalanceYear,openingBalanceQtr});
+  const pushUndo=()=>{undoRef.current=[...undoRef.current.slice(-19),snapState()];setCanUndo(true);};
+  const undo=()=>{const h=undoRef.current;if(!h.length)return;const p=h[h.length-1];undoRef.current=h.slice(0,-1);setCanUndo(undoRef.current.length>0);setActs(p.acts);setYears(p.years);setCatOrder(p.catOrder);setCatNames(p.catNames);setCustomCats(p.customCats);setCatColors(p.catColors);setContributions(p.contributions);setOpeningBalance(p.openingBalance);setOpeningBalanceYear(p.openingBalanceYear);setOpeningBalanceQtr(p.openingBalanceQtr);};
+  const deleteYear=y=>{if(!confirm(`Delete FY${y}? All budget and actual data for this year will be removed.`))return;pushUndo();setYears(yy=>yy.filter(yr=>yr!==y));setActs(s=>s.map(a=>{const ny={...a.years};delete ny[y];return{...a,years:ny};}));setExcludedFromTotal(h=>h.filter(x=>x!==y));setHiddenYears(h=>h.filter(x=>x!==y));};
+
+  // ── Scenarios ──
+  const saveScenario=name=>{
+    if(!name.trim())return;
+    const s={id:uid(),name:name.trim(),createdAt:new Date().toISOString(),
+      actStates:Object.fromEntries(acts.map(a=>[a.id,a.activeInBudget])),
+      catHidden:[],years:[...years],excludedFromTotal:[...(excludedFromTotal||[])]};
+    setScenarios(prev=>[...prev.filter(x=>x.name!==name.trim()),s]);
+  };
+  const loadScenario=s=>{
+    pushUndo();
+    setActs(prev=>prev.map(a=>({...a,activeInBudget:s.actStates[a.id]??a.activeInBudget})));
+    if(s.excludedFromTotal)setExcludedFromTotal(s.excludedFromTotal);
+  };
+  const deleteScenario=id=>setScenarios(prev=>prev.filter(s=>s.id!==id));
+  const exportScenario=(s,exportYears)=>{
+    const sYears=(exportYears&&exportYears.length)?exportYears:years;
+    const sActs=s?acts.filter(a=>s.actStates[a.id]!==false):acts.filter(a=>a.activeInBudget);
+    const sName=s?.name||'Current View';
+    const allCatKeys=[...new Set(sActs.map(a=>a.category))];
+    const sCats=catOrder?catOrder.filter(c=>allCatKeys.includes(c)):[...allCatKeys];
+    const dCat=c=>(catNames&&catNames[c])||c;
+    const fmtN=v=>v==null||v===0?'–':'$'+Math.round(v).toLocaleString();
+    const fmtKN=v=>v==null?'–':Math.abs(v)>=1e6?'$'+(v/1e6).toFixed(2)+'M':Math.abs(v)>=1e3?'$'+(v/1e3).toFixed(0)+'K':'$'+Math.round(v);
+    const catCol=c=>cc(c);
+    // Build budget table rows
+    const yHdr=sYears.map(y=>`<th colspan='2' style='background:#1e1b4b;color:white;padding:8px 12px;text-align:center;border-right:2px solid rgba(255,255,255,0.2)'>FY${y}</th>`).join('');
+    const ySubHdr=sYears.map(()=>`<th style='background:#2d2a7a;color:#93c5fd;padding:5px 10px;text-align:right;font-size:11px'>Budget</th><th style='background:#2d2a7a;color:#86efac;padding:5px 10px;text-align:right;font-size:11px'>Actual</th>`).join('');
+    const rows=sCats.map(cat=>{
+      const cActs=sActs.filter(a=>a.category===cat);
+      if(!cActs.length)return '';
+      const bg=catCol(cat);
+      const actRows=cActs.map(act=>{
+        const cells=sYears.map(y=>{
+          const b=effBgt(act,y),a=yAct(act.years[y]);
+          return `<td style='text-align:right;padding:5px 10px;background:#f8f9ff;color:#1e40af'>${fmtN(b)}</td><td style='text-align:right;padding:5px 10px;background:#f0fdf4;color:#166534'>${fmtN(a)}</td>`;
+        }).join('');
+        const tB=sum(sYears.map(y=>effBgt(act,y))),tA=sum(sYears.map(y=>yAct(act.years[y])));
+        const v=tB-tA;
+        return `<tr><td style='padding:5px 12px;color:#374151'>${act.name}</td><td style='text-align:center;padding:5px 8px;color:#6b7280;font-size:11px'>${act.commitmentStatus||''}</td>${cells}<td style='text-align:right;padding:5px 10px;font-weight:700;background:#eff6ff;color:#1e40af'>${fmtN(tB)}</td><td style='text-align:right;padding:5px 10px;font-weight:700;background:#f0fdf4;color:#166534'>${fmtN(tA)}</td><td style='text-align:right;padding:5px 10px;font-weight:700;color:${v>=0?'#166534':'#dc2626'}'>${v>=0?'+':''}${fmtN(v)}</td></tr>`;
+      }).join('');
+      const totCells=sYears.map(y=>{
+        const fb=sum(cActs.map(a=>effBgt(a,y))),fa=sum(cActs.map(a=>yAct(a.years[y])));
+        return `<td style='text-align:right;padding:6px 10px;background:#dbeafe;color:#1e40af;font-weight:700'>${fmtN(fb)}</td><td style='text-align:right;padding:6px 10px;background:#dcfce7;color:#166534;font-weight:700'>${fmtN(fa)}</td>`;
+      }).join('');
+      const ctB=sum(cActs.map(a=>sum(sYears.map(y=>effBgt(a,y))))),ctA=sum(cActs.map(a=>sum(sYears.map(y=>yAct(a.years[y])))));
+      const cv=ctB-ctA;
+      return `<tr><td colspan='${2+sYears.length*2+3}' style='background:${bg};color:white;font-weight:bold;padding:8px 12px'>${dCat(cat)}</td></tr>${actRows}<tr><td colspan='2' style='padding:6px 12px;background:#e0e7ff;color:#3730a3;font-weight:700'>${dCat(cat)} — Total</td>${totCells}<td style='text-align:right;padding:6px 10px;background:#dbeafe;color:#1e40af;font-weight:bold'>${fmtN(ctB)}</td><td style='text-align:right;padding:6px 10px;background:#dcfce7;color:#166534;font-weight:bold'>${fmtN(ctA)}</td><td style='text-align:right;padding:6px 10px;font-weight:bold;color:${cv>=0?'#166534':'#dc2626'}'>${cv>=0?'+':''}${fmtN(cv)}</td></tr>`;
+    }).join('');
+    const gB=sum(sActs.map(a=>sum(sYears.map(y=>effBgt(a,y))))),gA=sum(sActs.map(a=>sum(sYears.map(y=>yAct(a.years[y])))));
+    const gV=gB-gA;
+    const grandCells=sYears.map(y=>{
+      const fb=sum(sActs.map(a=>effBgt(a,y))),fa=sum(sActs.map(a=>yAct(a.years[y])));
+      return `<td style='text-align:right;padding:10px;color:#93c5fd;font-weight:900'>${fmtKN(fb)}</td><td style='text-align:right;padding:10px;color:#c4b5fd;font-weight:900'>${fmtKN(fa)}</td>`;
+    }).join('');
+    // Build cash flow table
+    const cByQ={};
+    (contributions||[]).forEach(ct=>{
+      if(!ct.date||!ct.amount)return;
+      const[cy,cms]=ct.date.split('-');
+      const qi=Math.floor((parseInt(cms)-1)/3);
+      const k=`${cy}-${qi}`;
+      cByQ[k]=(cByQ[k]||0)+(ct.amount||0);
+    });
+    const aByQ={},bByQ={};
+    sYears.forEach(yr=>[0,1,2,3].forEach(qi=>{
+      const q='q'+(qi+1);
+      aByQ[`${yr}-${qi}`]=sum(sActs.map(a=>(a.years[yr]||{})[q+'a']||0));
+      bByQ[`${yr}-${qi}`]=sum(sActs.map(a=>(a.years[yr]||{})[q+'b']||0));
+    }));
+    let bal=closingBalanceOverride!=null?closingBalanceOverride:(openingBalance||0);
+    const cfRows=[];
+    sYears.forEach(yr=>['Q1','Q2','Q3','Q4'].forEach((qn,qi)=>{
+      const k=`${yr}-${qi}`;
+      const cashIn=cByQ[k]||0;
+      const actOut=aByQ[k]||0,bgtOut=bByQ[k]||0;
+      const cashOut=actOut>0?actOut:bgtOut;
+      const begin=bal;
+      bal=begin+cashIn-cashOut;
+      const balColor=bal>=0?'#166534':'#dc2626';
+      cfRows.push(`<tr><td style='padding:5px 12px'>${qn} FY${yr}</td><td style='text-align:right;padding:5px 10px;color:#166534'>${cashIn>0?fmtN(cashIn):'–'}</td><td style='text-align:right;padding:5px 10px;color:#dc2626'>${cashOut>0?fmtN(-cashOut):'–'}</td><td style='text-align:right;padding:5px 10px;font-weight:700;color:${balColor}'>${fmtN(bal)}</td><td style='text-align:right;padding:5px 10px;color:#6b7280;font-size:11px'>${actOut>0?'Actuals':'Budget'}</td></tr>`);
+    }));
+    // Build contributions table
+    const contribRows=(contributions||[]).map(ct=>`<tr><td style='padding:5px 12px'>${ct.source||ct.name||''}</td><td style='padding:5px 10px;color:#6b7280'>${ct.type||''}</td><td style='text-align:right;padding:5px 10px;font-weight:700;color:#1e40af'>${fmtN(ct.amount)}</td><td style='padding:5px 10px;color:#6b7280'>${ct.date||''}</td><td style='padding:5px 12px;color:#6b7280'>${ct.notes||''}</td></tr>`).join('');
+    const logoSvg=`<svg height=44 viewBox="0 0 318 245" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle">
+    <path d="M178.149 112.176C170.766 113.169 163.449 114.598 156.235 116.456C155.787 116.571 155.319 116.59 154.864 116.512C154.408 116.433 153.973 116.26 153.589 116.002C153.205 115.745 152.879 115.409 152.633 115.017C152.387 114.625 152.228 114.186 152.164 113.728L144.04 53.9356H143.454L103.753 129.335L102.893 130.924L98.5725 139.108C98.2821 139.662 97.8366 140.119 97.2904 140.424C83.898 147.955 71.1891 156.641 59.3082 166.383C58.7184 166.871 57.9765 167.138 57.2109 167.136C56.4454 167.134 55.7044 166.864 55.117 166.373C54.5296 165.882 54.1324 165.201 53.9948 164.448C53.8571 163.695 53.9878 162.917 54.3636 162.251L57.3058 157.04L130.987 25.6777C131.271 25.1688 131.686 24.7451 132.189 24.4502C132.692 24.1553 133.264 23.9999 133.847 24H163.782C164.556 24.0002 165.305 24.2742 165.897 24.7734C166.488 25.2726 166.884 25.9651 167.015 26.7281L169.964 44.0058L176.911 84.7097L180.948 108.367C181.025 108.803 181.013 109.249 180.913 109.679C180.812 110.11 180.626 110.515 180.364 110.871C180.102 111.227 179.771 111.526 179.39 111.751C179.009 111.975 178.587 112.12 178.149 112.176Z" fill="white"/>
+    <path d="M293.981 154.996C294.173 163.435 292.921 171.844 290.278 179.861C280.941 208.688 249.577 223.132 220.85 220.745C201.023 219.095 181.531 210.587 170.079 193.739C164.021 184.426 160.195 173.839 158.901 162.805C157.451 152.203 156.077 142.24 154.809 133.002C154.709 132.245 154.877 131.477 155.283 130.829C155.689 130.182 156.307 129.697 157.032 129.456C164.612 126.856 172.396 124.895 180.303 123.594C181.141 123.456 182.001 123.649 182.7 124.131C183.4 124.612 183.884 125.347 184.054 126.179L188.392 147.549C190.517 158 192.198 169.011 198.739 177.791C202.122 182.152 206.463 185.677 211.427 188.093C216.39 190.509 221.843 191.751 227.364 191.724C232.752 191.69 238.068 190.478 242.938 188.171C247.809 185.865 252.116 182.52 255.556 178.373C258.996 174.225 261.486 169.375 262.852 164.162C264.218 158.95 264.427 153.502 263.463 148.2C259.712 128.423 242.661 120.737 224.366 118.408C193.473 114.428 159.201 120.044 132.4 136.426C131.718 136.845 131.037 137.275 130.355 137.721C130.304 137.747 130.255 137.777 130.208 137.81C130.176 137.841 130.14 137.867 130.099 137.885C130.073 137.9 130.049 137.918 130.027 137.94C105.982 151.661 80.784 174.535 59.7535 212.371L56.2343 218.686C55.9503 219.196 55.5349 219.622 55.0312 219.918C54.5276 220.214 53.9546 220.37 53.3703 220.37H27.282C26.7146 220.371 26.1571 220.224 25.6635 219.944C25.1699 219.664 24.7568 219.261 24.4655 218.774C24.1741 218.288 24.0141 217.734 24.0009 217.167C23.9877 216.599 24.1222 216.038 24.3905 215.539L27.4252 209.895C27.4729 209.803 27.5205 209.725 27.5751 209.639C50.8153 173.358 92.3682 149.083 93.6845 148.316C121.893 130.243 154.703 120.389 187.4 114.162C205.219 110.444 223.486 109.352 241.621 110.92C250.643 111.767 259.496 113.9 267.913 117.255C275.11 120.03 281.432 124.68 286.223 130.724C291.239 137.827 293.947 146.301 293.981 154.996Z" fill="#D4D4D4"/>
+  </svg>`;
+    const html=`<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'><title>${sName} — Ariadne Bio Budget</title>
+    <style>
+    *{box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:0;padding:32px;background:#f8f9ff;color:#1e1b4b}
+    .card{background:white;border-radius:12px;padding:24px;margin-bottom:24px;box-shadow:0 1px 4px rgba(0,0,0,0.08)}
+    table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #f0f0f8}
+    tr:hover td{background:#fafafe!important}
+    .no-print{}
+    @media print{
+      body{padding:16px;background:white}
+      .no-print{display:none!important}
+      .card{box-shadow:none;border:1px solid #e5e7eb;page-break-inside:avoid}
+      table{font-size:10px}
+    }
+    </style></head><body>
+    <!-- Header -->
+    <div style='background:linear-gradient(135deg,#1e1b4b,#7c3aed);color:white;padding:32px 40px;border-radius:16px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center'>
+      <div style='display:flex;align-items:center;gap:16px'>
+        ${logoSvg}
+        <div>
+          <div style='font-size:11px;opacity:0.55;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px'>Ariadne Bio ® — Programme Budget</div>
+          <h1 style='margin:0 0 4px;font-size:26px;font-weight:900'>${sName}</h1>
+          <div style='opacity:0.65;font-size:13px'>Years: ${sYears.map(y=>'FY'+y).join(' + ')} · ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</div>
+        </div>
+      </div>
+      <div style='text-align:right'>
+        <div style='font-size:36px;font-weight:900'>${fmtKN(gB)}</div>
+        <div style='font-size:12px;opacity:0.65'>Total Programme Budget</div>
+        <div style='font-size:13px;margin-top:4px;color:${gV>=0?'#86efac':'#fca5a5'}'>${gB>0?Math.round(gA/gB*100):0}% utilised · ${gV>=0?'+':''}${fmtKN(gV)} variance</div>
+      </div>
+    </div>
+    <!-- Print button -->
+    <div class='no-print' style='margin-bottom:20px;display:flex;gap:10px'>
+      <button onclick='window.print()' style='background:#1e1b4b;color:white;border:none;padding:10px 22px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer'>🖨️ Print / Export PDF</button>
+      <span style='font-size:12px;color:#9ca3af;align-self:center'>Tip: In the print dialog choose ‘Save as PDF’ to download.</span>
+    </div>
+    <!-- Budget table -->
+    <div class='card'>
+      <div style='font-size:15px;font-weight:700;margin-bottom:14px'>📋 Programme Budget by Category</div>
+      <div style='overflow-x:auto'><table>
+        <thead><tr><th style='background:#1e1b4b;color:white;padding:9px 12px;text-align:left' rowspan='2'>Activity</th><th style='background:#1e1b4b;color:white;padding:9px 8px;text-align:center' rowspan='2'>Status</th>${yHdr}<th colspan='3' style='background:#1e1b4b;color:white;padding:9px 12px;text-align:center'>TOTAL</th></tr>
+        <tr>${ySubHdr}<th style='background:#2d2a7a;color:#93c5fd;padding:5px 10px;text-align:right;font-size:11px'>Budget</th><th style='background:#2d2a7a;color:#86efac;padding:5px 10px;text-align:right;font-size:11px'>Actual</th><th style='background:#2d2a7a;color:#fde68a;padding:5px 10px;text-align:right;font-size:11px'>Variance</th></tr></thead>
+        <tbody>${rows}
+        <tr><td colspan='2' style='background:#1e1b4b;color:#93c5fd;font-weight:900;padding:11px 12px;font-size:13px'>TOTAL PROGRAMME</td>${grandCells}<td style='text-align:right;padding:10px;background:#1e1b4b;color:#93c5fd;font-weight:900'>${fmtKN(gB)}</td><td style='text-align:right;padding:10px;background:#1e1b4b;color:#c4b5fd;font-weight:900'>${fmtKN(gA)}</td><td style='text-align:right;padding:10px;background:#1e1b4b;font-weight:900;color:${gV>=0?'#4ade80':'#f87171'}'>${gV>=0?'+':''}${fmtKN(gV)}</td></tr>
+        </tbody></table></div></div>
+    <!-- Cash Flow -->
+    <div class='card'>
+      <div style='font-size:15px;font-weight:700;margin-bottom:14px'>💸 Cash Flow &amp; Balance</div>
+      <table><thead><tr><th style='background:#f8f9ff;color:#374151;padding:7px 12px;text-align:left'>Quarter</th><th style='background:#f8f9ff;color:#166534;padding:7px 10px;text-align:right'>Cash In</th><th style='background:#f8f9ff;color:#dc2626;padding:7px 10px;text-align:right'>Cash Out</th><th style='background:#f8f9ff;color:#1e1b4b;padding:7px 10px;text-align:right'>Running Balance</th><th style='background:#f8f9ff;color:#6b7280;padding:7px 10px;text-align:right'>Basis</th></tr></thead>
+      <tbody>${cfRows.join('')}</tbody></table></div>
+    ${(contributions&&contributions.length)?`<div class='card'><div style='font-size:15px;font-weight:700;margin-bottom:14px'>💰 Funding &amp; Contributions</div><table><thead><tr><th style='text-align:left;padding:7px 12px;background:#f8f9ff'>Source</th><th style='text-align:left;padding:7px 10px;background:#f8f9ff'>Type</th><th style='text-align:right;padding:7px 10px;background:#f8f9ff'>Amount</th><th style='text-align:left;padding:7px 10px;background:#f8f9ff'>Date</th><th style='text-align:left;padding:7px 12px;background:#f8f9ff'>Notes</th></tr></thead><tbody>${contribRows}</tbody></table></div>`:''}
+    <div style='text-align:center;color:#9ca3af;font-size:11px;margin-top:20px'>Ariadne Bio Programme Budget Tracker · Confidential · ${new Date().toISOString().slice(0,10)}</div>
+    </body></html>`;
+    let _exportOk=true;
+    try{
+      const blob=new Blob([html],{type:'text/html'});
+      const url=URL.createObjectURL(blob);
+      const win=window.open(url,'_blank');
+      if(!win){alert('Popup blocked. Please allow popups for this page and try again.');}
+    }catch(e){_exportOk=false;alert('Export error: '+e.message+'\n\n'+e.stack);}
+  };
 
   // ── Sync handlers ──
-  const buildPayload=()=>({acts,years,contributions,openingBalance,openingBalanceYear,openingBalanceQtr,closingBalanceOverride,customStatuses,_savedBy:userName||'Team',_savedAt:new Date().toISOString()});
+  const buildPayload=()=>({acts,years,contributions,openingBalance,openingBalanceYear,openingBalanceQtr,closingBalanceOverride,customStatuses,scenarios,_savedBy:userName||'Team',_savedAt:new Date().toISOString()});
   const applyRemote=d=>{
     if(d.acts)setActs(d.acts);
     if(d.years)setYears(d.years);
@@ -2519,13 +3140,14 @@ function App(){
     if(d.openingBalanceQtr!=null)setOpeningBalanceQtr(d.openingBalanceQtr);
     if(d.closingBalanceOverride!=null)setClosingBalanceOverride(d.closingBalanceOverride);
     if(d.customStatuses)setCustomStatuses(d.customStatuses);
+    if(d.scenarios)setScenarios(d.scenarios);
     if(d._savedBy)setSavedBy(d._savedBy);
   };
   const handlePull=async()=>{
     setSyncStatus('pulling');setSyncError('');
     try{
       const d=await jbPull();
-      if(d){applyRemote(d);setSyncStatus('pulled');}
+      if(d){applyRemote(d);setSyncStatus('pulled');setLRSA(d._savedAt||null);}
       else setSyncStatus('idle');
       const pt=new Date();setLastSync(pt);localStorage.setItem('ariadne_lastsync',pt.toISOString());
       if(d&&d._savedBy){setSavedBy(d._savedBy);localStorage.setItem('ariadne_savedby',d._savedBy);}
@@ -2536,6 +3158,15 @@ function App(){
     if(!userName.trim()){alert('Please enter your name in the sync bar first.');return;}
     setSyncStatus('pushing');setSyncError('');
     try{
+      // Overwrite guard: check if remote was updated since our last sync
+      const remote=await jbPull();
+      if(remote&&remote._savedAt&&lrsaRef.current&&remote._savedAt!==lrsaRef.current){
+        const who=remote._savedBy||'a colleague';
+        const when=new Date(remote._savedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+        if(!confirm('⚠️ Overwrite warning\n\n'+who+' saved changes at '+when+' — after your last sync.\n\nPushing now will overwrite their work. Are you sure?')){
+          setSyncStatus('idle');return;
+        }
+      }
       await jbPush(buildPayload());
       const pushT=new Date();setSyncStatus('pushed');
       setSavedBy(userName);localStorage.setItem('ariadne_savedby',userName);
@@ -2544,9 +3175,25 @@ function App(){
     }catch(e){setSyncStatus('error');setSyncError(e.message);alert('Push failed: '+e.message);}
   };
 
+  // Auto-pull every 60s
+  useEffect(()=>{
+    if(!SYNC_ON)return;
+    const id=setInterval(async()=>{
+      try{
+        const d=await jbPull();
+        if(d&&d._savedAt&&(!lrsaRef.current||d._savedAt>lrsaRef.current)){
+          applyRemote(d);
+          setLRSA(d._savedAt||null);
+          const pt=new Date();setLastSync(pt);localStorage.setItem('ariadne_lastsync',pt.toISOString());
+          if(d._savedBy){setSavedBy(d._savedBy);localStorage.setItem('ariadne_savedby',d._savedBy);}
+        }
+      }catch(e){}
+    },60000);
+    return()=>clearInterval(id);
+  },[]);
   // Export/Import
   const exportJSON=()=>{
-    const b=new Blob([JSON.stringify({acts,years,contributions,openingBalance,openingBalanceYear,openingBalanceQtr,closingBalanceOverride,customStatuses},null,2)],{type:'application/json'});
+    const b=new Blob([JSON.stringify({acts,years,contributions,openingBalance,openingBalanceYear,openingBalanceQtr,closingBalanceOverride,customStatuses,catNames,customCats,catOrder,catColors,scenarios},null,2)],{type:'application/json'});
     const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`ariadne-budget-${new Date().toISOString().split('T')[0]}.json`;a.click();
   };
   const importJSON=e=>{
@@ -2563,6 +3210,11 @@ function App(){
           if(d.openingBalanceQtr!=null)setOpeningBalanceQtr(d.openingBalanceQtr);
           if(d.closingBalanceOverride!=null)setClosingBalanceOverride(d.closingBalanceOverride);
           if(d.customStatuses)setCustomStatuses(d.customStatuses);
+          if(d.catNames)setCatNames(d.catNames);
+          if(d.customCats)setCustomCats(d.customCats);
+          if(d.catOrder)setCatOrder(d.catOrder);
+          if(d.catColors)setCatColors(d.catColors);
+          if(d.scenarios)setScenarios(d.scenarios);
           alert('✓ Imported successfully.');
         }else alert('Invalid format.');
       }catch{alert('Cannot parse file.');}
@@ -2950,13 +3602,14 @@ function App(){
     {id:'budget',l:'💼 Budget Tracker'},
     {id:'programme',l:'📋 Programme Total'},
     {id:'timeline',l:'📅 Timeline'},
+    {id:'scenarios',l:'🎯 Scenarios'},
   ];
   const visYears=years.filter(y=>!hiddenYears.includes(y));
 
   return(
     <div className="min-h-screen">
       <header className="px-6 py-4 shadow-lg" style={{background:`linear-gradient(135deg,${NAVY},${PURPLE})`}}>
-        <div className="max-w-screen-2xl mx-auto flex items-center justify-between gap-4 flex-wrap">
+        <div className="w-full flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4"><Logo h={38}/>
             <div>
               <div className="text-white font-black text-xl tracking-tight">Ariadne Bio<sup className="text-xs font-normal opacity-60">®</sup></div>
@@ -2964,6 +3617,7 @@ function App(){
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            {canUndo&&<button onClick={undo} title="Undo last action (Ctrl+Z)" className="px-3 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-white text-xs font-bold transition-colors flex items-center gap-1">↩ Undo</button>}
             <label className="flex items-center gap-1.5 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-white text-xs font-bold cursor-pointer transition-colors">↑ Import JSON<input type="file" accept=".json" onChange={importJSON} className="hidden"/></label>
             <button onClick={exportJSON} className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-white text-xs font-bold transition-colors">↓ Export JSON</button>
             <button onClick={exportExcel} className="px-3 py-2 bg-white rounded-xl text-xs font-black shadow-sm" style={{color:NAVY}}>↓ Excel</button>
@@ -2974,16 +3628,16 @@ function App(){
       <SyncBar status={syncStatus} lastSync={lastSync} savedBy={savedBy} onPull={handlePull} onPush={handlePush} userName={userName} onSetUserName={setUserName}/>
 
       <nav className="px-6 overflow-x-auto" style={{background:NAVY}}>
-        <div className="max-w-screen-2xl mx-auto flex gap-1 min-w-max">
+        <div className="w-full flex gap-1 min-w-max">
           {TABS.map(t=>(
             <button key={t.id} onClick={()=>setTab(t.id)} className={`px-4 py-3 text-sm font-bold transition-all border-b-2 whitespace-nowrap ${tab===t.id?'text-white border-white':'text-white/40 border-transparent hover:text-white/70'}`}>{t.l}</button>
           ))}
         </div>
       </nav>
 
-      <main className="max-w-screen-2xl mx-auto px-4 py-5">
+      <main className="w-full px-3 py-5">
 
-        {tab==='dashboard'&&<Dashboard acts={dispActs} years={years}/>}
+        {tab==='dashboard'&&<Dashboard acts={dispActs} years={years} catNames={catNames}/>}
 
         {tab==='budget'&&(
           <div className="space-y-4">
@@ -2992,13 +3646,30 @@ function App(){
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Years:</span>
                 {years.map(y=>(
-                  <button key={y} onClick={()=>toggleHideYear(y)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 ${hiddenYears.includes(y)?'border-gray-200 text-gray-400 bg-white':'border-transparent text-white shadow-sm'}`}
-                    style={!hiddenYears.includes(y)?{background:`linear-gradient(135deg,${NAVY},${PURPLE})`}:{}}>
-                    {hiddenYears.includes(y)?'👁 ':''} FY{y}{hiddenYears.includes(y)?' (hidden)':''}
-                  </button>
+                  <span key={y} className="flex items-center gap-0.5">
+                    <button onClick={()=>toggleHideYear(y)}
+                      className={`px-3 py-1.5 rounded-l-xl text-xs font-bold transition-all border-2 border-r-0 ${hiddenYears.includes(y)?'border-gray-200 text-gray-400 bg-white':'border-transparent text-white shadow-sm'}`}
+                      style={!hiddenYears.includes(y)?{background:`linear-gradient(135deg,${NAVY},${PURPLE})`}:{}}>
+                      {hiddenYears.includes(y)?'👁 ':''} FY{y}{hiddenYears.includes(y)?' (hidden)':''}
+                    </button>
+                    <button onClick={()=>deleteYear(y)} title={`Delete FY${y}`}
+                      className={`px-1.5 py-1.5 rounded-r-xl text-xs font-bold transition-all border-2 border-l-0 ${hiddenYears.includes(y)?'border-gray-200 text-gray-400 bg-white hover:border-red-300 hover:text-red-400':'border-transparent text-white/70 hover:text-white hover:bg-red-500 shadow-sm'}`}
+                      style={!hiddenYears.includes(y)?{background:`linear-gradient(135deg,${NAVY},${PURPLE})`}:{}}>
+                      ×
+                    </button>
+                  </span>
                 ))}
                 <button onClick={addNextYear} className="px-3 py-1.5 rounded-xl text-xs font-bold border-2 border-dashed border-indigo-300 text-indigo-600 hover:bg-indigo-50 transition-colors">+ Add FY{nextYear}</button>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap mt-1">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Total:</span>
+                {years.map(y=>(
+                  <button key={y} onClick={()=>toggleExcludeFromTotal(y)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 ${excludedFromTotal.includes(y)?'border-gray-200 text-gray-400 bg-white':'border-transparent text-white shadow-sm'}`}
+                    style={!excludedFromTotal.includes(y)?{background:`linear-gradient(135deg,#059669,#0891b2)`}:{}}>
+                    {excludedFromTotal.includes(y)?'☐ ':'☑ '} FY{y}
+                  </button>
+                ))}
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 {/* Compact toggle */}
@@ -3014,7 +3685,13 @@ function App(){
                 <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
                   <input type="checkbox" checked={ddOnly} onChange={e=>setDdOnly(e.target.checked)} className="w-4 h-4 accent-indigo-600 rounded"/> DD View
                 </label>
-                <button onClick={()=>{setDefaultAddCat(ALL_CATS[0]);setModal('add');}} className="px-4 py-2 rounded-xl text-white text-sm font-bold shadow-sm" style={{background:`linear-gradient(135deg,${NAVY},${PURPLE})`}}>+ Add Activity</button>
+                <button onClick={()=>{setDefaultAddCat(allCats[0]);setModal('add');}} className="px-4 py-2 rounded-xl text-white text-sm font-bold shadow-sm" style={{background:`linear-gradient(135deg,${NAVY},${PURPLE})`}}>+ Add Activity</button>
+                <button onClick={()=>{setNewCatName('');setAddCatModal(true);}} className="px-4 py-2 rounded-xl text-white text-sm font-bold shadow-sm" style={{background:`linear-gradient(135deg,#7c3aed,#4f46e5)`}}>+ Add Category</button>
+                <button onClick={()=>window.print()}
+                  className="px-3 py-2 rounded-xl text-sm font-bold border border-gray-200 bg-white text-gray-600 hover:border-indigo-300 hover:text-indigo-600 transition-colors no-print"
+                  title="Print current view or save as PDF">
+                  🖨️ PDF
+                </button>
               </div>
             </div>
             {/* Legend */}
@@ -3041,7 +3718,7 @@ function App(){
             )}
             {visYears.length===0
               ?<div className="bg-white rounded-2xl p-12 text-center text-gray-400">All years hidden. Click a year above to show it.</div>
-              :<BudgetTable acts={dispActs} years={years} hiddenYears={hiddenYears} compact={compact} onUpdate={updCell} onEdit={a=>setModal(a)} onDelete={delAct} onToggleDD={toggleDD} onToggleActive={toggleActive} onUpdateActivity={updActivity} onAddInCategory={openAddForCat} onMove={moveAct} onReorder={reorderAct}/>
+              :<BudgetTable acts={dispActs} years={years} hiddenYears={hiddenYears} compact={compact} onUpdate={updCell} onEdit={a=>setModal(a)} onDelete={delAct} onToggleDD={toggleDD} onToggleActive={toggleActive} onUpdateActivity={updActivity} onAddInCategory={openAddForCat} onMove={moveAct} onReorder={reorderAct} catOrder={catOrder} catNames={catNames} customCats={customCats} catColors={catColors} onMoveCat={moveCat} onReorderCat={reorderCat} onRenameCat={renameCat} onDeleteCat={deleteCat} onSetCatColor={setCatColor} excludedFromTotal={excludedFromTotal}/>
             }
             {/* Cash Flow & Contributions panel */}
             {showCF&&(
@@ -3067,27 +3744,55 @@ function App(){
           <div className="space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
-                <h2 className="font-black text-gray-800 text-lg">TOTAL {years.join(' + ')} — Full Programme</h2>
+                <h2 className="font-black text-gray-800 text-lg">TOTAL {visYears.length?visYears.join(' + '):'(none)'} — Full Programme</h2>
                 <p className="text-sm text-gray-500">Headline investor number — committed spend across all fiscal years.</p>
               </div>
               <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
                 <input type="checkbox" checked={ddOnly} onChange={e=>setDdOnly(e.target.checked)} className="w-4 h-4 accent-indigo-600"/> DD View only
               </label>
             </div>
-            <ProgrammeTotal acts={dispActs} years={years}/>
+            <ProgrammeTotal acts={dispActs} years={years} catNames={catNames} catOrder={catOrder}/>
           </div>
         )}
 
         {tab==='timeline'&&<TimelineTab acts={dispActs} years={years}/>}
 
+        {tab==='scenarios'&&<ScenariosPanel
+          acts={acts} years={years} scenarios={scenarios}
+          catNames={catNames} catOrder={catOrder}
+          onSave={saveScenario} onLoad={loadScenario}
+          onDelete={deleteScenario} onExport={exportScenario}
+          onToggleActive={(id,v)=>{pushUndo();setActs(prev=>prev.map(a=>a.id===id?{...a,activeInBudget:v}:a));}}
+        />}
+
       </main>
 
+      {addCatModal&&(
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{background:'rgba(0,0,0,0.45)'}}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-80 space-y-4">
+            <h3 className="font-black text-gray-800 text-base">New Category</h3>
+            <input autoFocus
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              placeholder="Category name…"
+              value={newCatName}
+              onChange={e=>setNewCatName(e.target.value)}
+              onKeyDown={e=>{if(e.key==='Enter')addCat(newCatName);if(e.key==='Escape')setAddCatModal(false);}}
+            />
+            <div className="flex justify-end gap-2">
+              <button onClick={()=>setAddCatModal(false)} className="px-4 py-2 rounded-xl text-sm text-gray-500 hover:bg-gray-100">Cancel</button>
+              <button onClick={()=>addCat(newCatName)} className="px-4 py-2 rounded-xl text-white text-sm font-bold" style={{background:`linear-gradient(135deg,#7c3aed,#4f46e5)`}}>Create</button>
+            </div>
+          </div>
+        </div>
+      )}
       {modal&&(
         <ActivityModal
           activity={modal==='add'?null:modal}
           years={years}
           defaultCategory={defaultAddCat}
           customStatuses={customStatuses}
+          allCats={allCats}
+          catNames={catNames}
           onSave={a=>{
             if(a.commitmentStatus&&![...ALL_CS,...customStatuses].includes(a.commitmentStatus)){
               setCustomStatuses(s=>[...s,a.commitmentStatus]);
