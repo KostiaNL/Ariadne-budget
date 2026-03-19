@@ -1820,6 +1820,30 @@ function ScenariosPanel({acts,years,scenarios,catNames,catOrder,onSave,onLoad,on
   );
 }
 
+// ── Column resize helper ──
+function enableColResize(t){
+  if(t._rsz)return;t._rsz=true;
+  const ths=Array.from(t.querySelectorAll('thead tr:first-child th'));
+  ths.forEach(th=>{
+    const cls=th.className||'';
+    if(/\bw-[0-9]\b/.test(cls)||cls.includes('sticky1')||cls.includes('sticky2')||cls.includes('sticky3'))return;
+    th.style.position='relative';
+    if(th.querySelector('.crh'))return;
+    const h=document.createElement('span');
+    h.className='crh';
+    h.style.cssText='position:absolute;right:0;top:0;height:100%;width:5px;cursor:col-resize;z-index:5;display:block;background:transparent';
+    h.onmousedown=e=>{
+      if(!t._lk){t._lk=true;ths.forEach(x=>{x.style.minWidth=x.getBoundingClientRect().width+'px';x.style.width=x.getBoundingClientRect().width+'px';});t.style.tableLayout='fixed';}
+      const sx=e.pageX,sw=th.getBoundingClientRect().width;
+      const mm=e2=>{const w=Math.max(30,sw+e2.pageX-sx);th.style.width=w+'px';th.style.minWidth=w+'px';};
+      const mu=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
+      document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
+      e.preventDefault();e.stopPropagation();
+    };
+    th.appendChild(h);
+  });
+}
+
 function Dashboard({acts,years,catNames}){
   const active=acts.filter(a=>a.activeInBudget);
   const allB=a=>sum(years.map(y=>effBgt(a,y)));
@@ -3006,8 +3030,8 @@ function App(){
     const fmtKN=v=>v==null?'–':Math.abs(v)>=1e6?'$'+(v/1e6).toFixed(2)+'M':Math.abs(v)>=1e3?'$'+(v/1e3).toFixed(0)+'K':'$'+Math.round(v);
     const catCol=c=>cc(c);
     // Build budget table rows
-    const yHdr=sYears.map(y=>`<th colspan='2' style='background:#1e1b4b;color:white;padding:8px 12px;text-align:center;border-right:2px solid rgba(255,255,255,0.2)'>FY${y}</th>`).join('');
-    const ySubHdr=sYears.map(()=>`<th style='background:#2d2a7a;color:#93c5fd;padding:5px 10px;text-align:right;font-size:11px'>Budget</th><th style='background:#2d2a7a;color:#86efac;padding:5px 10px;text-align:right;font-size:11px'>Actual</th>`).join('');
+    const yHdr=sYears.map(y=>`<th class='yr-hdr' colspan='2' style='background:#1e1b4b;color:white;padding:8px 12px;text-align:center;border-right:2px solid rgba(255,255,255,0.2)'>FY${y}</th>`).join('');
+    const ySubHdr=sYears.map(()=>`<th style='background:#2d2a7a;color:#93c5fd;padding:5px 10px;text-align:right;font-size:11px'>Budget</th><th class='col-actual' style='background:#2d2a7a;color:#86efac;padding:5px 10px;text-align:right;font-size:11px'>Actual</th>`).join('');
     const rows=sCats.map(cat=>{
       const cActs=sActs.filter(a=>a.category===cat);
       if(!cActs.length)return '';
@@ -3015,25 +3039,25 @@ function App(){
       const actRows=cActs.map(act=>{
         const cells=sYears.map(y=>{
           const b=effBgt(act,y),a=yAct(act.years[y]);
-          return `<td style='text-align:right;padding:5px 10px;background:#f8f9ff;color:#1e40af'>${fmtN(b)}</td><td style='text-align:right;padding:5px 10px;background:#f0fdf4;color:#166534'>${fmtN(a)}</td>`;
+          return `<td style='text-align:right;padding:5px 10px;background:#f8f9ff;color:#1e40af'>${fmtN(b)}</td><td class='col-actual' style='text-align:right;padding:5px 10px;background:#f0fdf4;color:#166534'>${fmtN(a)}</td>`;
         }).join('');
         const tB=sum(sYears.map(y=>effBgt(act,y))),tA=sum(sYears.map(y=>yAct(act.years[y])));
         const v=tB-tA;
-        return `<tr><td style='padding:5px 12px;color:#374151'>${act.name}</td><td style='text-align:center;padding:5px 8px;color:#6b7280;font-size:11px'>${act.commitmentStatus||''}</td>${cells}<td style='text-align:right;padding:5px 10px;font-weight:700;background:#eff6ff;color:#1e40af'>${fmtN(tB)}</td><td style='text-align:right;padding:5px 10px;font-weight:700;background:#f0fdf4;color:#166534'>${fmtN(tA)}</td><td style='text-align:right;padding:5px 10px;font-weight:700;color:${v>=0?'#166534':'#dc2626'}'>${v>=0?'+':''}${fmtN(v)}</td></tr>`;
+        return `<tr><td style='padding:5px 12px;color:#374151'>${act.name}</td><td class='col-status' style='text-align:center;padding:5px 8px;color:#6b7280;font-size:11px'>${act.commitmentStatus||''}</td>${cells}<td style='text-align:right;padding:5px 10px;font-weight:700;background:#eff6ff;color:#1e40af'>${fmtN(tB)}</td><td class='col-actual' style='text-align:right;padding:5px 10px;font-weight:700;background:#f0fdf4;color:#166534'>${fmtN(tA)}</td><td class='col-variance' style='text-align:right;padding:5px 10px;font-weight:700;color:${v>=0?'#166534':'#dc2626'}'>${v>=0?'+':''}${fmtN(v)}</td></tr>`;
       }).join('');
       const totCells=sYears.map(y=>{
         const fb=sum(cActs.map(a=>effBgt(a,y))),fa=sum(cActs.map(a=>yAct(a.years[y])));
-        return `<td style='text-align:right;padding:6px 10px;background:#dbeafe;color:#1e40af;font-weight:700'>${fmtN(fb)}</td><td style='text-align:right;padding:6px 10px;background:#dcfce7;color:#166534;font-weight:700'>${fmtN(fa)}</td>`;
+        return `<td style='text-align:right;padding:6px 10px;background:#dbeafe;color:#1e40af;font-weight:700'>${fmtN(fb)}</td><td class='col-actual' style='text-align:right;padding:6px 10px;background:#dcfce7;color:#166534;font-weight:700'>${fmtN(fa)}</td>`;
       }).join('');
       const ctB=sum(cActs.map(a=>sum(sYears.map(y=>effBgt(a,y))))),ctA=sum(cActs.map(a=>sum(sYears.map(y=>yAct(a.years[y])))));
       const cv=ctB-ctA;
-      return `<tr><td colspan='${2+sYears.length*2+3}' style='background:${bg};color:white;font-weight:bold;padding:8px 12px'>${dCat(cat)}</td></tr>${actRows}<tr><td colspan='2' style='padding:6px 12px;background:#e0e7ff;color:#3730a3;font-weight:700'>${dCat(cat)} — Total</td>${totCells}<td style='text-align:right;padding:6px 10px;background:#dbeafe;color:#1e40af;font-weight:bold'>${fmtN(ctB)}</td><td style='text-align:right;padding:6px 10px;background:#dcfce7;color:#166534;font-weight:bold'>${fmtN(ctA)}</td><td style='text-align:right;padding:6px 10px;font-weight:bold;color:${cv>=0?'#166534':'#dc2626'}'>${cv>=0?'+':''}${fmtN(cv)}</td></tr>`;
+      return `<tr><td class='cat-hdr-td' colspan='${2+sYears.length*2+3}' style='background:${bg};color:white;font-weight:bold;padding:8px 12px'>${dCat(cat)}</td></tr>${actRows}<tr><td class='cat-tot-label' colspan='2' style='padding:6px 12px;background:#e0e7ff;color:#3730a3;font-weight:700'>${dCat(cat)} — Total</td>${totCells}<td style='text-align:right;padding:6px 10px;background:#dbeafe;color:#1e40af;font-weight:bold'>${fmtN(ctB)}</td><td class='col-actual' style='text-align:right;padding:6px 10px;background:#dcfce7;color:#166534;font-weight:bold'>${fmtN(ctA)}</td><td class='col-variance' style='text-align:right;padding:6px 10px;font-weight:bold;color:${cv>=0?'#166534':'#dc2626'}'>${cv>=0?'+':''}${fmtN(cv)}</td></tr>`;
     }).join('');
     const gB=sum(sActs.map(a=>sum(sYears.map(y=>effBgt(a,y))))),gA=sum(sActs.map(a=>sum(sYears.map(y=>yAct(a.years[y])))));
     const gV=gB-gA;
     const grandCells=sYears.map(y=>{
       const fb=sum(sActs.map(a=>effBgt(a,y))),fa=sum(sActs.map(a=>yAct(a.years[y])));
-      return `<td style='text-align:right;padding:10px;color:#93c5fd;font-weight:900'>${fmtKN(fb)}</td><td style='text-align:right;padding:10px;color:#c4b5fd;font-weight:900'>${fmtKN(fa)}</td>`;
+      return `<td style='text-align:right;padding:10px;color:#93c5fd;font-weight:900'>${fmtKN(fb)}</td><td class='col-actual' style='text-align:right;padding:10px;color:#c4b5fd;font-weight:900'>${fmtKN(fa)}</td>`;
     }).join('');
     // Build cash flow table
     const cByQ={};
@@ -3075,13 +3099,58 @@ function App(){
     table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #f0f0f8}
     tr:hover td{background:#fafafe!important}
     .no-print{}
+    .tog{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid #6366f1;transition:all 0.15s;margin:0}
+    .tog.on{background:#6366f1;color:white}
+    .tog.off{background:white;color:#6366f1}
     @media print{
       body{padding:16px;background:white}
       .no-print{display:none!important}
       .card{box-shadow:none;border:1px solid #e5e7eb;page-break-inside:avoid}
       table{font-size:10px}
     }
-    </style></head><body>
+    </style>
+    <script>
+    function enableColResize(t){
+      if(t._rsz)return;t._rsz=true;
+      var ths=Array.from(t.querySelectorAll('thead tr:first-child th'));
+      ths.forEach(function(th){
+        var cls=th.className||'';
+        if(/\bw-[0-9]\b/.test(cls)||cls.includes('sticky1')||cls.includes('sticky2')||cls.includes('sticky3'))return;
+        th.style.position='relative';
+        if(th.querySelector('.crh'))return;
+        var h=document.createElement('span');
+        h.className='crh';
+        h.style.cssText='position:absolute;right:0;top:0;height:100%;width:5px;cursor:col-resize;z-index:5;display:block;background:transparent';
+        h.onmousedown=function(e){
+          if(!t._lk){t._lk=true;ths.forEach(function(x){x.style.width=x.getBoundingClientRect().width+'px';});t.style.tableLayout='fixed';}
+          var sx=e.pageX,sw=th.getBoundingClientRect().width;
+          var mm=function(e2){var w=Math.max(30,sw+e2.pageX-sx);th.style.width=w+'px';};
+          var mu=function(){document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
+          document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
+          e.preventDefault();e.stopPropagation();
+        };
+        th.appendChild(h);
+      });
+    }
+    document.addEventListener('DOMContentLoaded',function(){
+      document.querySelectorAll('table').forEach(function(t){if(t.querySelector('thead'))enableColResize(t);});
+    });
+    function recalcColspans(){
+      var showAct=document.getElementById('tog-actual').classList.contains('on');
+      var showVar=document.getElementById('tog-variance').classList.contains('on');
+      var showSta=document.getElementById('tog-status').classList.contains('on');
+      var nYr=document.querySelectorAll('.yr-hdr').length;
+      document.querySelectorAll('.yr-hdr').forEach(function(t){t.colSpan=1+(showAct?1:0);});
+      var th=document.getElementById('tot-hdr');if(th)th.colSpan=1+(showAct?1:0)+(showVar?1:0);
+      var ph=document.getElementById('prog-hdr');if(ph)ph.colSpan=1+(showSta?1:0);
+      var catCols=1+(showSta?1:0)+nYr*(1+(showAct?1:0))+1+(showAct?1:0)+(showVar?1:0);
+      document.querySelectorAll('.cat-hdr-td').forEach(function(t){t.colSpan=catCols;});
+      document.querySelectorAll('.cat-tot-label').forEach(function(t){t.colSpan=1+(showSta?1:0);});
+    }
+    function togCols(cls,id){var els=document.querySelectorAll('.'+cls),btn=document.getElementById(id),on=btn.classList.contains('on');els.forEach(function(e){e.style.display=on?'none':''});btn.className='tog '+(on?'off':'on');recalcColspans();}
+    function togSec(id,bid){var el=document.getElementById(id),btn=document.getElementById(bid);if(!el)return;var on=btn.classList.contains('on');el.style.display=on?'none':'';btn.className='tog '+(on?'off':'on');}
+    <\/script>
+    </head><body>
     <!-- Header -->
     <div style='background:linear-gradient(135deg,#1e1b4b,#7c3aed);color:white;padding:32px 40px;border-radius:16px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center'>
       <div style='display:flex;align-items:center;gap:16px'>
@@ -3103,21 +3172,30 @@ function App(){
       <button onclick='window.print()' style='background:#1e1b4b;color:white;border:none;padding:10px 22px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer'>🖨️ Print / Export PDF</button>
       <span style='font-size:12px;color:#9ca3af;align-self:center'>Tip: In the print dialog choose ‘Save as PDF’ to download.</span>
     </div>
+    <!-- Toggle bar -->
+    <div class='no-print' style='margin-bottom:20px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 18px;background:white;border-radius:12px;border:1px solid #e5e7eb'>
+      <span style='font-size:12px;font-weight:700;color:#6b7280;margin-right:4px'>Show / Hide:</span>
+      <button id='tog-actual' class='tog on' onclick='togCols("col-actual","tog-actual")'>&#x1F4CA; Actuals</button>
+      <button id='tog-variance' class='tog on' onclick='togCols("col-variance","tog-variance")'>&#x1F4C9; Variance</button>
+      <button id='tog-status' class='tog on' onclick='togCols("col-status","tog-status")'>&#x1F4CB; Status</button>
+      <button id='tog-cf' class='tog on' onclick='togSec("section-cf","tog-cf")'>&#x1F4B8; Cash Flow</button>
+      <button id='tog-fund' class='tog on' onclick='togSec("section-fund","tog-fund")'>&#x1F4B0; Funding</button>
+    </div>
     <!-- Budget table -->
     <div class='card'>
       <div style='font-size:15px;font-weight:700;margin-bottom:14px'>📋 Programme Budget by Category</div>
       <div style='overflow-x:auto'><table>
-        <thead><tr><th style='background:#1e1b4b;color:white;padding:9px 12px;text-align:left' rowspan='2'>Activity</th><th style='background:#1e1b4b;color:white;padding:9px 8px;text-align:center' rowspan='2'>Status</th>${yHdr}<th colspan='3' style='background:#1e1b4b;color:white;padding:9px 12px;text-align:center'>TOTAL</th></tr>
-        <tr>${ySubHdr}<th style='background:#2d2a7a;color:#93c5fd;padding:5px 10px;text-align:right;font-size:11px'>Budget</th><th style='background:#2d2a7a;color:#86efac;padding:5px 10px;text-align:right;font-size:11px'>Actual</th><th style='background:#2d2a7a;color:#fde68a;padding:5px 10px;text-align:right;font-size:11px'>Variance</th></tr></thead>
+        <thead><tr><th style='background:#1e1b4b;color:white;padding:9px 12px;text-align:left' rowspan='2'>Activity</th><th class='col-status' style='background:#1e1b4b;color:white;padding:9px 8px;text-align:center' rowspan='2'>Status</th>${yHdr}<th id='tot-hdr' colspan='3' style='background:#1e1b4b;color:white;padding:9px 12px;text-align:center'>TOTAL</th></tr>
+        <tr>${ySubHdr}<th style='background:#2d2a7a;color:#93c5fd;padding:5px 10px;text-align:right;font-size:11px'>Budget</th><th class='col-actual' style='background:#2d2a7a;color:#86efac;padding:5px 10px;text-align:right;font-size:11px'>Actual</th><th class='col-variance' style='background:#2d2a7a;color:#fde68a;padding:5px 10px;text-align:right;font-size:11px'>Variance</th></tr></thead>
         <tbody>${rows}
-        <tr><td colspan='2' style='background:#1e1b4b;color:#93c5fd;font-weight:900;padding:11px 12px;font-size:13px'>TOTAL PROGRAMME</td>${grandCells}<td style='text-align:right;padding:10px;background:#1e1b4b;color:#93c5fd;font-weight:900'>${fmtKN(gB)}</td><td style='text-align:right;padding:10px;background:#1e1b4b;color:#c4b5fd;font-weight:900'>${fmtKN(gA)}</td><td style='text-align:right;padding:10px;background:#1e1b4b;font-weight:900;color:${gV>=0?'#4ade80':'#f87171'}'>${gV>=0?'+':''}${fmtKN(gV)}</td></tr>
+        <tr><td id='prog-hdr' colspan='2' style='background:#1e1b4b;color:#93c5fd;font-weight:900;padding:11px 12px;font-size:13px'>TOTAL PROGRAMME</td>${grandCells}<td style='text-align:right;padding:10px;background:#1e1b4b;color:#93c5fd;font-weight:900'>${fmtKN(gB)}</td><td class='col-actual' style='text-align:right;padding:10px;background:#1e1b4b;color:#c4b5fd;font-weight:900'>${fmtKN(gA)}</td><td class='col-variance' style='text-align:right;padding:10px;background:#1e1b4b;font-weight:900;color:${gV>=0?'#4ade80':'#f87171'}'>${gV>=0?'+':''}${fmtKN(gV)}</td></tr>
         </tbody></table></div></div>
     <!-- Cash Flow -->
-    <div class='card'>
+    <div class='card' id='section-cf'>
       <div style='font-size:15px;font-weight:700;margin-bottom:14px'>💸 Cash Flow &amp; Balance</div>
       <table><thead><tr><th style='background:#f8f9ff;color:#374151;padding:7px 12px;text-align:left'>Quarter</th><th style='background:#f8f9ff;color:#166534;padding:7px 10px;text-align:right'>Cash In</th><th style='background:#f8f9ff;color:#dc2626;padding:7px 10px;text-align:right'>Cash Out</th><th style='background:#f8f9ff;color:#1e1b4b;padding:7px 10px;text-align:right'>Running Balance</th><th style='background:#f8f9ff;color:#6b7280;padding:7px 10px;text-align:right'>Basis</th></tr></thead>
       <tbody>${cfRows.join('')}</tbody></table></div>
-    ${(contributions&&contributions.length)?`<div class='card'><div style='font-size:15px;font-weight:700;margin-bottom:14px'>💰 Funding &amp; Contributions</div><table><thead><tr><th style='text-align:left;padding:7px 12px;background:#f8f9ff'>Source</th><th style='text-align:left;padding:7px 10px;background:#f8f9ff'>Type</th><th style='text-align:right;padding:7px 10px;background:#f8f9ff'>Amount</th><th style='text-align:left;padding:7px 10px;background:#f8f9ff'>Date</th><th style='text-align:left;padding:7px 12px;background:#f8f9ff'>Notes</th></tr></thead><tbody>${contribRows}</tbody></table></div>`:''}
+    ${(contributions&&contributions.length)?`<div class='card' id='section-fund'><div style='font-size:15px;font-weight:700;margin-bottom:14px'>💰 Funding &amp; Contributions</div><table><thead><tr><th style='text-align:left;padding:7px 12px;background:#f8f9ff'>Source</th><th style='text-align:left;padding:7px 10px;background:#f8f9ff'>Type</th><th style='text-align:right;padding:7px 10px;background:#f8f9ff'>Amount</th><th style='text-align:left;padding:7px 10px;background:#f8f9ff'>Date</th><th style='text-align:left;padding:7px 12px;background:#f8f9ff'>Notes</th></tr></thead><tbody>${contribRows}</tbody></table></div>`:''}
     <div style='text-align:center;color:#9ca3af;font-size:11px;margin-top:20px'>Ariadne Bio Programme Budget Tracker · Confidential · ${new Date().toISOString().slice(0,10)}</div>
     </body></html>`;
     let _exportOk=true;
@@ -3174,6 +3252,18 @@ function App(){
       setTimeout(()=>setSyncStatus(s=>s==='pushed'?'idle':s),2500);
     }catch(e){setSyncStatus('error');setSyncError(e.message);alert('Push failed: '+e.message);}
   };
+
+  // Column resize: auto-apply to all tables with thead
+  useEffect(()=>{
+    let tid;
+    const apply=()=>{clearTimeout(tid);tid=setTimeout(()=>{
+      document.querySelectorAll('table').forEach(t=>{if(t.querySelector('thead')&&!t._rsz)enableColResize(t);});
+    },120);};
+    apply();
+    const obs=new MutationObserver(apply);
+    obs.observe(document.body,{childList:true,subtree:true});
+    return()=>{obs.disconnect();clearTimeout(tid);};
+  },[]);
 
   // Auto-pull every 60s
   useEffect(()=>{
