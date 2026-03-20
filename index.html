@@ -2676,7 +2676,6 @@ function ProgrammeTotal({acts,years,catNames,catOrder}){
               <th className="py-3 px-2 text-white font-bold text-center" colSpan={3} style={{background:'rgba(255,255,255,.15)'}}>TOTAL {visYears.join('+')}</th>
             </tr>
             <tr style={{background:NAVY+'cc'}}>
-              <th/><th/>
               {visYears.map(y=><React.Fragment key={y}><th className="py-1.5 px-2 text-blue-200 text-center">Budget</th><th className="py-1.5 px-2 text-green-200 text-center">Actual</th></React.Fragment>)}
               <th className="py-1.5 px-2 text-white/70 text-center">Budget</th>
               <th className="py-1.5 px-2 text-white/70 text-center">Actual</th>
@@ -3373,19 +3372,15 @@ function App(){
   };
   const exportExcel=()=>{
     const wb=XLSX.utils.book_new();
-    // ── Colour palette (no # prefix for xlsx-js-style) ──────────────────────
-    const CN='1A126E',CP='3F3AA5',CW='FFFFFF',CPALE='EEEDF8';
+    const CN='1A126E',CW='FFFFFF',CPALE='EEEDF8';
     const CBGT='EFF6FF',CACT='F0FFF4',CVPOS='DCFCE7',CVNEG='FEE2E2';
     const CAT_HEX={
-      'Research & Development (R&D)':'4F46E5',
-      'Preclinical':'0891B2',
-      'Toxicology':'DC2626',
-      'Chemistry, Manufacturing & Controls (CMC)':'2563EB',
-      'Regulatory':'7C3AED',
-      'General & Administrative (G&A)':'6B7280',
+      'Research & Development (R&D)':'4F46E5','Preclinical':'0891B2',
+      'Toxicology':'DC2626','Chemistry, Manufacturing & Controls (CMC)':'2563EB',
+      'Regulatory':'7C3AED','General & Administrative (G&A)':'6B7280',
     };
-    // ── Style helpers ────────────────────────────────────────────────────────
-    const mf=(rgb)=>({patternType:'solid',fgColor:{rgb}});
+    const getCH=c=>(catColors&&catColors[c]?catColors[c].replace('#',''):null)||CAT_HEX[c]||CN;
+    const mf=rgb=>({patternType:'solid',fgColor:{rgb}});
     const mn=(rgb,bold=false,sz=10)=>({color:{rgb},bold,sz,name:'Calibri'});
     const ma=(h='left',v='center',wrap=false)=>({horizontal:h,vertical:v,wrapText:wrap});
     const mb=(c='D1D5DB')=>({top:{style:'thin',color:{rgb:c}},bottom:{style:'thin',color:{rgb:c}},left:{style:'thin',color:{rgb:c}},right:{style:'thin',color:{rgb:c}}});
@@ -3403,121 +3398,213 @@ function App(){
     const sTA={fill:mf('ECFDF5'),font:mn('065F46',true,10),alignment:ma('right'),border:mb('6EE7B7')};
     const sGrand={fill:mf(CN),font:mn(CW,true,11),alignment:ma('right'),border:mb('0F0A4B')};
     const sGrandL={fill:mf(CN),font:mn('FCD34D',true,11),alignment:ma('left'),border:mb('0F0A4B')};
-    const varStyle=(v,bold=false)=>{
+    const vSt=(v,bold=false)=>{
       if(v>0)return bold?{...sVP,font:mn('15803D',true,10)}:sVP;
       if(v<0)return bold?{...sVN,font:mn('B91C1C',true,10)}:sVN;
       return bold?{...sVZ,font:mn('6B7280',true,10)}:sVZ;
     };
-    // ── Build rows + metadata ────────────────────────────────────────────────
-    const cats=[...new Set(acts.map(a=>a.category))];
-    const NF=4,NPY=3;
-    const TC=NF+years.length*NPY+3;
-    const hdr=['Activity','Status','Active?','DD?',
-      ...years.flatMap(y=>[`FY${y} Budget`,`FY${y} Actual`,`FY${y} Var`]),
-      'Programme Budget','Programme Actual','Programme Var'];
-    const dataRows=[],rowMeta=[];
-    const push=(row,meta)=>{dataRows.push(row);rowMeta.push(meta);};
-    push(['Ariadne Bio Inc. — Programme Budget Tracker'],'title');
-    push([`Generated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}`],'date');
-    push([],'empty');
-    push(hdr,'hdr');
-    cats.forEach(cat=>{
-      push([cat],{t:'cat',cat});
-      acts.filter(a=>a.category===cat).forEach(a=>{
-        const row=[a.name,a.commitmentStatus,a.activeInBudget?'Y':'N',a.includeDD?'Y':'N'];
-        years.forEach(y=>{const b=yBgt(a.years[y]),ac=yAct(a.years[y]);row.push(b,ac,b-ac);});
-        const tb=sum(years.map(y=>yBgt(a.years[y]))),ta=sum(years.map(y=>yAct(a.years[y])));
-        row.push(tb,ta,tb-ta);
-        push(row,'act');
+    const FMT='#,##0';
+    const ec=(r,c)=>XLSX.utils.encode_cell({r,c});
+    // ── Filters ───────────────────────────────────────────────────────────────
+    const visYrs=years.filter(y=>!hiddenYears.includes(y));
+    const ddActs=acts.filter(a=>a.includeDD);
+    const allDDCats=[...new Set(ddActs.map(a=>a.category))];
+    const filtCats=(catOrder||allDDCats).filter(c=>allDDCats.includes(c));
+    // ── Generic sheet builder (isQtr=false→yearly, isQtr=true→quarterly) ─────
+    const buildSheet=(isQtr)=>{
+      const FX=4,PY=isQtr?11:3,PT=3,TC=FX+visYrs.length*PY+PT;
+      const HDRS=isQtr?2:1;
+      const plan=[];
+      plan.push({t:'title'});plan.push({t:'date'});plan.push({t:'empty'});
+      if(isQtr){plan.push({t:'hdr1'});plan.push({t:'hdr2'});}else{plan.push({t:'hdr'});}
+      const catRanges=[];
+      filtCats.forEach(cat=>{
+        const cActs=ddActs.filter(a=>a.category===cat);
+        if(cActs.length===0)return;
+        plan.push({t:'cat',cat});
+        const firstAct=plan.length;
+        cActs.forEach(a=>plan.push({t:'act',a,cat}));
+        const lastAct=plan.length-1;
+        const totRI=plan.length;
+        plan.push({t:'ctot',cat,firstAct,lastAct,cActs});
+        plan.push({t:'empty'});
+        catRanges.push({cat,firstAct,lastAct,totRI,cActs});
       });
-      const ca=acts.filter(a=>a.category===cat);
-      const cr=['TOTAL '+cat.toUpperCase(),'','',''];
-      years.forEach(y=>{const b=sum(ca.map(a=>yBgt(a.years[y]))),ac=sum(ca.map(a=>yAct(a.years[y])));cr.push(b,ac,b-ac);});
-      const ctb=sum(ca.map(a=>sum(years.map(y=>yBgt(a.years[y]))))),cta=sum(ca.map(a=>sum(years.map(y=>yAct(a.years[y])))));
-      cr.push(ctb,cta,ctb-cta);
-      push(cr,{t:'ctot',cat});
-      push([],'empty');
-    });
-    const gr=['TOTAL PROGRAMME','','',''];
-    years.forEach(y=>{const b=sum(acts.map(a=>yBgt(a.years[y]))),ac=sum(acts.map(a=>yAct(a.years[y])));gr.push(b,ac,b-ac);});
-    const gtb=sum(acts.map(a=>sum(years.map(y=>yBgt(a.years[y]))))),gta=sum(acts.map(a=>sum(years.map(y=>yAct(a.years[y])))));
-    gr.push(gtb,gta,gtb-gta);
-    push(gr,'grand');
-    // ── Create sheet & apply styles ──────────────────────────────────────────
-    const ws=XLSX.utils.aoa_to_sheet(dataRows);
-    ws['!cols']=[{wch:42},{wch:22},{wch:8},{wch:6},
-      ...years.flatMap(()=>[{wch:14},{wch:14},{wch:12}]),
-      {wch:16},{wch:16},{wch:14}];
-    ws['!rows']=[];
-    const enc=(r,c)=>XLSX.utils.encode_cell({r,c});
-    const ensure=(r,c)=>{const a=enc(r,c);if(!ws[a])ws[a]={t:'z',v:''};return a;};
-    const styleRow=(ri,fn)=>{for(let c=0;c<TC;c++){const a=ensure(ri,c);ws[a].s=typeof fn==='function'?fn(c):fn;}};
-    rowMeta.forEach((meta,ri)=>{
-      if(meta==='title'){styleRow(ri,sTitle);ws['!rows'][ri]={hpx:28};}
-      else if(meta==='date'){styleRow(ri,sDate);}
-      else if(meta==='hdr'){styleRow(ri,sHdr);ws['!rows'][ri]={hpx:36};}
-      else if(meta==='empty'){}
-      else if(typeof meta==='object'&&meta.t==='cat'){
-        const ch=CAT_HEX[meta.cat]||CN;
-        styleRow(ri,{fill:mf(ch),font:mn(CW,true,11),alignment:ma('left'),border:mb(ch)});
-        ws['!rows'][ri]={hpx:22};
-      }
-      else if(meta==='act'){
-        for(let c=0;c<TC;c++){
-          const a=ensure(ri,c);
-          const isTotal=c>=NF+years.length*NPY;
-          if(c===0)ws[a].s=sAct2;
-          else if(c===1)ws[a].s=sStat;
-          else if(c<NF)ws[a].s={...sStat,alignment:ma('center')};
-          else if(isTotal){
-            const off=c-NF-years.length*NPY;
-            if(off===0)ws[a].s=sTB;
-            else if(off===1)ws[a].s=sTA;
-            else ws[a].s=varStyle(ws[a].v||0);
-          } else {
-            const col=(c-NF)%NPY;
-            if(col===0)ws[a].s=sBgt;
-            else if(col===1)ws[a].s=sAct;
-            else ws[a].s=varStyle(ws[a].v||0);
-          }
-          if(c>=NF&&ws[a].t==='n')ws[a].z='#,##0';
+      const grandRI=plan.length;
+      plan.push({t:'grand',catRanges});
+      // Build initial row values
+      const rows=plan.map((p)=>{
+        if(p.t==='title')return[`Ariadne Bio — ${isQtr?'Quarterly Detail':'Yearly Summary'} — DD View`];
+        if(p.t==='date')return[`${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})} · Years: ${visYrs.map(y=>'FY'+y).join(', ')} · ${ddActs.length} DD activities`];
+        if(p.t==='empty')return[];
+        if(p.t==='hdr')return['Activity','Status','Active?','DD?',...visYrs.flatMap(y=>[`FY${y} Budget`,`FY${y} Actual`,`FY${y} Var`]),'Prog Budget','Prog Actual','Prog Var'];
+        if(p.t==='hdr1')return['Activity','Status','Active?','DD?',...visYrs.flatMap(y=>[`FY${y}`,...Array(PY-1).fill('')]),'Programme','',''];
+        if(p.t==='hdr2')return['','','','',...visYrs.flatMap(()=>['Q1 Bgt','Q1 Act','Q2 Bgt','Q2 Act','Q3 Bgt','Q3 Act','Q4 Bgt','Q4 Act','FY Bgt','FY Act','FY Var']),'Total Bgt','Total Act','Total Var'];
+        if(p.t==='cat'){const r=[p.cat];for(let i=1;i<TC;i++)r.push('');return r;}
+        if(p.t==='act'){
+          const{a}=p;const row=[a.name,a.commitmentStatus,a.activeInBudget?'Y':'N',a.includeDD?'Y':'N'];
+          if(isQtr){visYrs.forEach(y=>{const yd=a.years[y]||{};row.push(yd.q1b||0,yd.q1a||0,yd.q2b||0,yd.q2a||0,yd.q3b||0,yd.q3a||0,yd.q4b||0,yd.q4a||0,0,0,0);});}
+          else{visYrs.forEach(y=>row.push(yBgt(a.years[y]),yAct(a.years[y]),0));}
+          row.push(0,0,0);return row;
         }
+        if(p.t==='ctot'){const r=['TOTAL '+(catNames&&catNames[p.cat]||p.cat).toUpperCase(),'','',''];for(let i=FX;i<TC;i++)r.push(0);return r;}
+        if(p.t==='grand'){const r=['TOTAL PROGRAMME','','',''];for(let i=FX;i<TC;i++)r.push(0);return r;}
+        return[];
+      });
+      const ws2=XLSX.utils.aoa_to_sheet(rows);
+      ws2['!rows']=[];ws2['!merges']=[];
+      if(isQtr){
+        visYrs.forEach((_,i)=>ws2['!merges'].push({s:{r:3,c:FX+i*PY},e:{r:3,c:FX+i*PY+PY-1}}));
+        ws2['!merges'].push({s:{r:3,c:FX+visYrs.length*PY},e:{r:3,c:FX+visYrs.length*PY+2}});
       }
-      else if(typeof meta==='object'&&meta.t==='ctot'){
-        for(let c=0;c<TC;c++){
-          const a=ensure(ri,c);
-          const isTotal=c>=NF+years.length*NPY;
-          if(c===0)ws[a].s={fill:mf(CPALE),font:mn(CN,true,10),alignment:ma('left'),border:mb('C7D2FE')};
-          else if(c<NF)ws[a].s={fill:mf(CPALE),font:mn(CN,false,10),border:mb('C7D2FE')};
-          else if(isTotal){
-            const off=c-NF-years.length*NPY;
-            if(off===0)ws[a].s={...sTB};
-            else if(off===1)ws[a].s={...sTA};
-            else ws[a].s=varStyle(ws[a].v||0,true);
-          } else {
-            const col=(c-NF)%NPY;
-            if(col===0)ws[a].s={...sTB};
-            else if(col===1)ws[a].s={...sTA};
-            else ws[a].s=varStyle(ws[a].v||0,true);
-          }
-          if(c>=NF&&ws[a].t==='n')ws[a].z='#,##0';
+      const ens=(r,c)=>{const a=ec(r,c);if(!ws2[a])ws2[a]={t:'z',v:''};return a;};
+      const setF=(r,c,f,v,s)=>{const a=ec(r,c);ws2[a]={t:'f',f,v:v||0,z:FMT,s:s||sBgt};};
+      const setN=(r,c,v,s)=>{const a=ec(r,c);ws2[a]={t:'n',v,z:FMT,s:s||sBgt};};
+      const setS=(r,c,s)=>{const a=ens(r,c);if(ws2[a])ws2[a].s=s;};
+      const styleRow=(ri,fn)=>{for(let c=0;c<TC;c++){const a=ens(ri,c);ws2[a].s=typeof fn==='function'?fn(c):fn;}};
+      const progBase=FX+visYrs.length*PY;
+      plan.forEach((p,ri)=>{
+        if(p.t==='title'){styleRow(ri,sTitle);ws2['!rows'][ri]={hpx:28};}
+        else if(p.t==='date'){styleRow(ri,sDate);ws2['!rows'][ri]={hpx:18};}
+        else if(p.t==='hdr'||p.t==='hdr1'){styleRow(ri,sHdr);ws2['!rows'][ri]={hpx:30};}
+        else if(p.t==='hdr2'){
+          styleRow(ri,sHdr);ws2['!rows'][ri]={hpx:30};
+          visYrs.forEach((_,yi)=>{const base=FX+yi*PY;
+            for(let q=0;q<4;q++){
+              setS(ri,base+q*2,{...sHdr,font:{...mn(CW,true,9),color:{rgb:'BFDBFE'}}});
+              setS(ri,base+q*2+1,{...sHdr,font:{...mn(CW,true,9),color:{rgb:'A7F3D0'}}});
+            }
+            setS(ri,base+8,{...sHdr,font:mn('BFDBFE',true,10)});
+            setS(ri,base+9,{...sHdr,font:mn('A7F3D0',true,10)});
+          });
         }
-        ws['!rows'][ri]={hpx:20};
-      }
-      else if(meta==='grand'){
-        styleRow(ri,(c)=>c===0?sGrandL:sGrand);
-        // Apply number format to grand row
-        for(let c=NF;c<TC;c++){const a=enc(ri,c);if(ws[a]&&ws[a].t==='n')ws[a].z='#,##0';}
-        ws['!rows'][ri]={hpx:26};
-      }
-    });
-    // Apply number format pass for any missed cells
-    const rng=XLSX.utils.decode_range(ws['!ref']);
-    for(let r=rng.s.r;r<=rng.e.r;r++)for(let c=NF;c<TC;c++){const a=enc(r,c);if(ws[a]&&ws[a].t==='n'&&!ws[a].z)ws[a].z='#,##0';}
-    // Freeze panes
-    ws['!freeze']={xSplit:4,ySplit:4};
-    // ── Contributions sheet ──────────────────────────────────────────────────
-    if(contributions.length>0){
+        else if(p.t==='cat'){
+          const ch=getCH(p.cat);
+          styleRow(ri,{fill:mf(ch),font:mn(CW,true,11),alignment:ma('left'),border:mb(ch)});
+          ws2['!rows'][ri]={hpx:22};
+        }
+        else if(p.t==='act'){
+          const{a}=p;ws2['!rows'][ri]={hpx:20};
+          setS(ri,0,sAct2);setS(ri,1,sStat);
+          setS(ri,2,{...sStat,alignment:ma('center')});setS(ri,3,{...sStat,alignment:ma('center')});
+          if(isQtr){
+            visYrs.forEach((y,yi)=>{
+              const base=FX+yi*PY;const yd=a.years[y]||{};
+              for(let q=0;q<4;q++){setN(ri,base+q*2,yd[`q${q+1}b`]||0,sBgt);setN(ri,base+q*2+1,yd[`q${q+1}a`]||0,sAct);}
+              const fyb=yBgt(a.years[y]),fya=yAct(a.years[y]);
+              setF(ri,base+8,`${ec(ri,base)}+${ec(ri,base+2)}+${ec(ri,base+4)}+${ec(ri,base+6)}`,fyb,sTB);
+              setF(ri,base+9,`${ec(ri,base+1)}+${ec(ri,base+3)}+${ec(ri,base+5)}+${ec(ri,base+7)}`,fya,sTA);
+              setF(ri,base+10,`${ec(ri,base+8)}-${ec(ri,base+9)}`,fyb-fya,vSt(fyb-fya));
+            });
+          }else{
+            visYrs.forEach((y,yi)=>{
+              const base=FX+yi*PY;const b=yBgt(a.years[y]),ac=yAct(a.years[y]);
+              setN(ri,base,b,sBgt);setN(ri,base+1,ac,sAct);
+              setF(ri,base+2,`${ec(ri,base)}-${ec(ri,base+1)}`,b-ac,vSt(b-ac));
+            });
+          }
+          const fyBCols=isQtr?visYrs.map((_,yi)=>ec(ri,FX+yi*PY+8)):visYrs.map((_,yi)=>ec(ri,FX+yi*PY));
+          const fyACols=isQtr?visYrs.map((_,yi)=>ec(ri,FX+yi*PY+9)):visYrs.map((_,yi)=>ec(ri,FX+yi*PY+1));
+          const pb=sum(visYrs.map(y=>yBgt(a.years[y]))),pa=sum(visYrs.map(y=>yAct(a.years[y])));
+          setF(ri,progBase,`SUM(${fyBCols.join(',')})`,pb,sTB);
+          setF(ri,progBase+1,`SUM(${fyACols.join(',')})`,pa,sTA);
+          setF(ri,progBase+2,`${ec(ri,progBase)}-${ec(ri,progBase+1)}`,pb-pa,vSt(pb-pa));
+        }
+        else if(p.t==='ctot'){
+          ws2['!rows'][ri]={hpx:22};
+          const lbl=[sAct2,sStat,{...sStat,alignment:ma('center')},{...sStat,alignment:ma('center')}];
+          lbl.forEach((s,c)=>setS(ri,c,{fill:mf(CPALE),font:mn(CN,true,10),alignment:s.alignment||ma('left'),border:mb('C7D2FE')}));
+          const{firstAct,lastAct,cActs:ca}=p;
+          for(let c=FX;c<TC;c++){
+            const f=`SUM(${ec(firstAct,c)}:${ec(lastAct,c)})`;
+            let cv=0,cs=sBgt;
+            if(isQtr){
+              const off=c-FX;const yi=Math.floor(off/PY);
+              if(yi<visYrs.length){
+                const y=visYrs[yi];const col=off%PY;
+                if(col<8){const q=Math.floor(col/2);const isA=col%2===1;cv=sum(ca.map(a=>(a.years[y]||{})[`q${q+1}${isA?'a':'b'}`]||0));cs=isA?sTA:sTB;}
+                else if(col===8){cv=sum(ca.map(a=>yBgt(a.years[y])));cs=sTB;}
+                else if(col===9){cv=sum(ca.map(a=>yAct(a.years[y])));cs=sTA;}
+                else{cv=sum(ca.map(a=>yBgt(a.years[y])))-sum(ca.map(a=>yAct(a.years[y])));cs=vSt(cv,true);}
+              }else{
+                const po=off-visYrs.length*PY;
+                if(po===0){cv=sum(ca.map(a=>sum(visYrs.map(y=>yBgt(a.years[y])))));cs=sTB;}
+                else if(po===1){cv=sum(ca.map(a=>sum(visYrs.map(y=>yAct(a.years[y])))));cs=sTA;}
+                else{cv=sum(ca.map(a=>sum(visYrs.map(y=>yBgt(a.years[y])))-sum(visYrs.map(y=>yAct(a.years[y])))));cs=vSt(cv,true);}
+              }
+            }else{
+              const col=(c-FX)%PY;const yi=Math.floor((c-FX)/PY);
+              if(yi<visYrs.length){
+                const y=visYrs[yi];
+                if(col===0){cv=sum(ca.map(a=>yBgt(a.years[y])));cs=sTB;}
+                else if(col===1){cv=sum(ca.map(a=>yAct(a.years[y])));cs=sTA;}
+                else{cv=sum(ca.map(a=>yBgt(a.years[y])))-sum(ca.map(a=>yAct(a.years[y])));cs=vSt(cv,true);}
+              }else{
+                const po=(c-FX)-visYrs.length*PY;
+                if(po===0){cv=sum(ca.map(a=>sum(visYrs.map(y=>yBgt(a.years[y])))));cs=sTB;}
+                else if(po===1){cv=sum(ca.map(a=>sum(visYrs.map(y=>yAct(a.years[y])))));cs=sTA;}
+                else{cv=sum(ca.map(a=>sum(visYrs.map(y=>yBgt(a.years[y])-yAct(a.years[y])))));cs=vSt(cv,true);}
+              }
+            }
+            ws2[ec(ri,c)]={t:'f',f,v:cv,z:FMT,s:cs};
+          }
+        }
+        else if(p.t==='grand'){
+          ws2['!rows'][ri]={hpx:28};
+          styleRow(ri,(c)=>c===0?sGrandL:sGrand);
+          for(let c=FX;c<TC;c++){
+            const refs=p.catRanges.map(cr=>ec(cr.totRI,c));
+            const f=refs.length?refs.join('+'):'0';
+            const aA=ddActs.filter(a=>a.activeInBudget);
+            let cv=0;
+            if(isQtr){
+              const off=c-FX;const yi=Math.floor(off/PY);
+              if(yi<visYrs.length){
+                const y=visYrs[yi];const col=off%PY;
+                if(col<8){const q=Math.floor(col/2);const isA=col%2===1;cv=sum(aA.map(a=>(a.years[y]||{})[`q${q+1}${isA?'a':'b'}`]||0));}
+                else if(col===8)cv=sum(aA.map(a=>yBgt(a.years[y])));
+                else if(col===9)cv=sum(aA.map(a=>yAct(a.years[y])));
+                else cv=sum(aA.map(a=>yBgt(a.years[y])))-sum(aA.map(a=>yAct(a.years[y])));
+              }else{
+                const po=off-visYrs.length*PY;
+                if(po===0)cv=sum(aA.map(a=>sum(visYrs.map(y=>yBgt(a.years[y])))));
+                else if(po===1)cv=sum(aA.map(a=>sum(visYrs.map(y=>yAct(a.years[y])))));
+                else cv=sum(aA.map(a=>r(sum(visYrs.map(y=>yBgt(a.years[y])))-sum(visYrs.map(y=>yAct(a.years[y]))))));
+              }
+            }else{
+              const col=(c-FX)%PY;const yi=Math.floor((c-FX)/PY);
+              if(yi<visYrs.length){
+                const y=visYrs[yi];
+                if(col===0)cv=sum(aA.map(a=>yBgt(a.years[y])));
+                else if(col===1)cv=sum(aA.map(a=>yAct(a.years[y])));
+                else cv=sum(aA.map(a=>yBgt(a.years[y])))-sum(aA.map(a=>yAct(a.years[y])));
+              }else{
+                const po=(c-FX)-visYrs.length*PY;
+                if(po===0)cv=sum(aA.map(a=>sum(visYrs.map(y=>yBgt(a.years[y])))));
+                else if(po===1)cv=sum(aA.map(a=>sum(visYrs.map(y=>yAct(a.years[y])))));
+                else cv=sum(aA.map(a=>sum(visYrs.map(y=>yBgt(a.years[y])-yAct(a.years[y])))));
+              }
+            }
+            ws2[ec(ri,c)]={t:'f',f,v:cv,z:FMT,s:sGrand};
+          }
+        }
+      });
+      // Number format pass
+      const rng=XLSX.utils.decode_range(ws2['!ref']);
+      for(let r=rng.s.r;r<=rng.e.r;r++)for(let c=FX;c<TC;c++){const a=ec(r,c);if(ws2[a]&&(ws2[a].t==='n'||ws2[a].t==='f')&&!ws2[a].z)ws2[a].z=FMT;}
+      ws2['!freeze']={xSplit:FX,ySplit:3+HDRS+1};
+      return ws2;
+    };
+    // ── Yearly sheet ──────────────────────────────────────────────────────────
+    const ws=buildSheet(false);
+    ws['!cols']=[{wch:44},{wch:22},{wch:7},{wch:5},...visYrs.flatMap(()=>[{wch:14},{wch:14},{wch:12}]),{wch:16},{wch:16},{wch:14}];
+    XLSX.utils.book_append_sheet(wb,ws,'DD View — Yearly');
+    // ── Quarterly sheet ───────────────────────────────────────────────────────
+    const qws=buildSheet(true);
+    qws['!cols']=[{wch:44},{wch:22},{wch:7},{wch:5},...visYrs.flatMap(()=>[...Array(8).fill({wch:11}),{wch:13},{wch:13},{wch:12}]),{wch:16},{wch:16},{wch:14}];
+    XLSX.utils.book_append_sheet(wb,qws,'DD View — Quarterly');
+    // ── Contributions sheet ───────────────────────────────────────────────────
+    if(contributions&&contributions.length>0){
       const cd=[];
       cd.push(['Ariadne Bio — Contributions & Cash Funding']);
       cd.push([`Generated: ${new Date().toLocaleDateString()}`]);
@@ -3525,22 +3612,18 @@ function App(){
       cd.push(['Date','Source / Round','Amount (USD)','Type','Notes']);
       contributions.forEach(c=>cd.push([c.date,c.source,c.amount||0,c.type,c.notes||'']));
       cd.push([]);
-      cd.push(['TOTAL','',sum(contributions.map(c=>c.amount||0)),'','']);
+      const totFormula={t:'f',f:`SUM(C5:C${4+contributions.length})`,v:sum(contributions.map(c=>c.amount||0)),z:'#,##0'};
+      cd.push(['TOTAL','',totFormula,'','']);
       const cws=XLSX.utils.aoa_to_sheet(cd);
       cws['!cols']=[{wch:14},{wch:32},{wch:16},{wch:18},{wch:40}];
-      const ce=(r,c)=>XLSX.utils.encode_cell({r,c});
-      const cen=(r,c)=>{const a=ce(r,c);if(!cws[a])cws[a]={t:'z',v:''};return a;};
-      [0,1,2,3,4].forEach(c=>{
-        const a0=cen(0,c);cws[a0].s=sTitle;
-        const a1=cen(1,c);cws[a1].s=sDate;
-        const a3=cen(3,c);cws[a3].s=sHdr;
-      });
-      for(let r=4;r<cd.length-2;r++){const a=cen(r,2);if(cws[a]&&cws[a].t==='n'){cws[a].s=sTB;cws[a].z='#,##0';}}
-      [0,1,2,3,4].forEach(c=>{const a=cen(cd.length-1,c);cws[a].s=c===2?sGrand:sGrandL;if(c===2&&cws[a].t==='n')cws[a].z='#,##0';});
+      const cen=(r,c)=>{const a=XLSX.utils.encode_cell({r,c});if(!cws[a])cws[a]={t:'z',v:''};return a;};
+      [0,1,2,3,4].forEach(c=>{cws[cen(0,c)].s=sTitle;cws[cen(1,c)].s=sDate;cws[cen(3,c)].s=sHdr;});
+      for(let r2=4;r2<cd.length-2;r2++){const a=cen(r2,2);if(cws[a]&&cws[a].t==='n'){cws[a].s=sTB;cws[a].z='#,##0';}}
+      const totR=cd.length-1;
+      [0,1,2,3,4].forEach(c=>{const a=cen(totR,c);cws[a].s=c===2?sGrand:sGrandL;if(c===2&&cws[a])cws[a].z='#,##0';});
       XLSX.utils.book_append_sheet(wb,cws,'Contributions');
     }
-    XLSX.utils.book_append_sheet(wb,ws,'Budget vs Actuals');
-    XLSX.writeFile(wb,`ariadne-budget-${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.writeFile(wb,`ariadne-dd-view-${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const TABS=[
