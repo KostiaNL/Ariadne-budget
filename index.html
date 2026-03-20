@@ -1280,7 +1280,7 @@ input:where([type='button'], [type='reset'], [type='submit']),
   <style>
     body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f0f7;}
     ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-thumb{background:#3F3AA5;border-radius:4px}::-webkit-scrollbar-track{background:#eeedf8}
-    .bgt-cell{background:#f5f8ff}.act-cell{background:#f5fff7}.fy-bgt-cell{background:#dbeafe;border-left:3px solid #93c5fd!important;font-weight:700}.fy-act-cell{background:#d1fae5;border-left:1px solid #6ee7b7;font-weight:700}.fy-var-cell{background:#f1f5f9;font-weight:700}.yr-sep{border-left:4px solid rgba(99,102,241,0.35)!important}.yr-sep-hdr{border-left:4px solid rgba(255,255,255,0.45)!important}
+    .bgt-cell{background:#f5f8ff}.act-cell{background:#f5fff7}.fy-bgt-cell{background:#dbeafe;border-left:3px solid #93c5fd!important;font-weight:700}.fy-act-cell{background:#d1fae5;border-left:1px solid #6ee7b7;font-weight:700}.fy-var-cell{background:#f1f5f9;font-weight:700}
     .var-pos{background:#f0fdf4;color:#15803d;font-weight:700}
     .var-neg{background:#fef2f2;color:#dc2626;font-weight:700}
     .var-zero{color:#d1d5db}
@@ -1401,7 +1401,6 @@ const CS_CFG={
 const csClass=s=>(CS_CFG[s]||{cls:'bg-gray-50 text-gray-500 border-gray-200'}).cls;
 
 const CAT_COLORS={
-  'Licensing & Intellectual Property':'#d97706',
   'Research & Development (R&D)':'#4f46e5',
   'Preclinical':'#0891b2',
   'Toxicology':'#dc2626',
@@ -1413,7 +1412,7 @@ const CAT_PALETTE=['#0f766e','#0369a1','#6d28d9','#be185d','#b45309','#15803d','
 const cc=c=>CAT_COLORS[c]||NAVY;
 
 const STUDY_STATUS=['Planned','Ongoing','Complete','On Hold'];
-const ALL_CATS=['Licensing & Intellectual Property','Research & Development (R&D)','Preclinical','Toxicology','Chemistry, Manufacturing & Controls (CMC)','Regulatory','General & Administrative (G&A)'];
+const ALL_CATS=['Research & Development (R&D)','Preclinical','Toxicology','Chemistry, Manufacturing & Controls (CMC)','Regulatory','General & Administrative (G&A)'];
 const ALL_CS=['Committed','Committed (Extension 1)','Committed (Extension)','Committed / High Priority','Optional','High Priority','Contingent'];
 const CONTRIB_TYPES=['Equity Round','SAFE Note','Convertible Note','Grant','Loan','In-Kind','Other'];
 const CONTRIB_COLORS={
@@ -1445,35 +1444,28 @@ function mkA(cat,name,cs,y5q1,y5q2,y5q3,y5q4,y6q1,y6q2,y6q3,y6q4,y7q1,y7q2,y7q3,
   };
 }
 const INIT_ACTS=[
-  {id:uid(),category:'Licensing & Intellectual Property',name:'ASRI License Fee',commitmentStatus:'Committed',includeDD:true,activeInBudget:true,comments:'',cros:[],years:{'2025':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2026':{q1b:250000,q1a:250000,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'Licensing & Intellectual Property',name:'ASRI Clinical',commitmentStatus:'Contingent',includeDD:false,activeInBudget:false,comments:'',cros:[],years:{'2025':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2026':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:550000,q3a:0,q4b:0,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'Licensing & Intellectual Property',name:'IP',commitmentStatus:'Committed',includeDD:true,activeInBudget:true,comments:'',cros:[],years:{'2025':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2026':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'Licensing & Intellectual Property',name:'Indication Selection – Third Parties',commitmentStatus:'Committed',includeDD:true,activeInBudget:true,comments:'',cros:[],years:{'2025':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:112395},'2026':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'Regulatory',name:'IND Filing – AB300 (Dimox)',commitmentStatus:'Committed',includeDD:true,activeInBudget:true,comments:'',cros:[],years:{'2025':{q1b:0,q1a:17387.41,q2b:0,q2a:28429.5,q3b:0,q3a:50759.54,q4b:0,q4a:73090.99},'2026':{q1b:50000,q1a:26457.89,q2b:28482.56,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'Regulatory',name:'Pre-IND Preparation & Submission – NCE',commitmentStatus:'Committed',includeDD:true,activeInBudget:true,comments:'',cros:[],years:{'2025':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2026':{q1b:50000,q1a:0,q2b:50000,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'Regulatory',name:'IND Preparation & Filing – NCE',commitmentStatus:'Optional',includeDD:false,activeInBudget:false,comments:'',cros:[],years:{'2025':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2026':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'Research & Development (R&D)',name:'In Vitro Pharmacology',commitmentStatus:'Committed',includeDD:true,activeInBudget:true,comments:'',cros:[],years:{'2025':{q1b:0,q1a:30613.74,q2b:0,q2a:9860,q3b:0,q3a:11800,q4b:0,q4a:12059.97},'2026':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'Research & Development (R&D)',name:'Pharmacokinetics & ADME',commitmentStatus:'Committed',includeDD:true,activeInBudget:true,comments:'',cros:[],years:{'2025':{q1b:0,q1a:0,q2b:0,q2a:46780,q3b:0,q3a:8496,q4b:0,q4a:0},'2026':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'Research & Development (R&D)',name:'Safety Pharmacology & CYP Inhibition',commitmentStatus:'Committed',includeDD:true,activeInBudget:true,comments:'',cros:[],years:{'2025':{q1b:0,q1a:4416,q2b:0,q2a:8832,q3b:0,q3a:2294.4,q4b:0,q4a:0},'2026':{q1b:0,q1a:0,q2b:29457.6,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'Preclinical',name:'Proof of Concept – Study Preparation',commitmentStatus:'Committed',includeDD:true,activeInBudget:true,comments:'',cros:[],years:{'2025':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2026':{q1b:60000,q1a:10000,q2b:140000,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'Preclinical',name:'PoC Study Initiation – Part A',commitmentStatus:'Committed',includeDD:true,activeInBudget:true,comments:'',cros:[],years:{'2025':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2026':{q1b:0,q1a:0,q2b:175000,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'Preclinical',name:'PoC Study Initiation – Part B',commitmentStatus:'Committed',includeDD:true,activeInBudget:true,comments:'',cros:[],years:{'2025':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2026':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:175000,q3a:0,q4b:0,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'Preclinical',name:'PoC Study Initiation – Part C',commitmentStatus:'Committed',includeDD:true,activeInBudget:true,comments:'',cros:[],years:{'2025':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2026':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:250000,q3a:0,q4b:300000,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'Preclinical',name:'In Vivo Efficacy Validation',commitmentStatus:'Committed',includeDD:true,activeInBudget:true,comments:'',cros:[],years:{'2025':{q1b:0,q1a:0,q2b:0,q2a:49637.99,q3b:0,q3a:36513,q4b:0,q4a:0},'2026':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'Chemistry, Manufacturing & Controls (CMC)',name:'Lead Candidate API Synthesis',commitmentStatus:'Committed',includeDD:true,activeInBudget:true,comments:'',cros:[],years:{'2025':{q1b:0,q1a:9550,q2b:0,q2a:9460,q3b:0,q3a:0,q4b:0,q4a:0},'2026':{q1b:0,q1a:6555,q2b:15990,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'Chemistry, Manufacturing & Controls (CMC)',name:'GMP Synthesis for Clinical Use – NCE',commitmentStatus:'Committed',includeDD:true,activeInBudget:true,comments:'',cros:[],years:{'2025':{q1b:0,q1a:5100,q2b:0,q2a:33021,q3b:0,q3a:21503,q4b:0,q4a:170056.54},'2026':{q1b:30319.46,q1a:25797,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'Chemistry, Manufacturing & Controls (CMC)',name:'GMP Formulation Development',commitmentStatus:'Committed',includeDD:true,activeInBudget:true,comments:'',cros:[],years:{'2025':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:33685},'2026':{q1b:70000,q1a:0,q2b:151315,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'Chemistry, Manufacturing & Controls (CMC)',name:'Additional API Synthesis',commitmentStatus:'Committed',includeDD:true,activeInBudget:true,comments:'',cros:[],years:{'2025':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:7716.68,q4b:0,q4a:16666.55},'2026':{q1b:25616.77,q1a:600,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'Chemistry, Manufacturing & Controls (CMC)',name:'GMP Synthesis – Phase 2',commitmentStatus:'Optional',includeDD:false,activeInBudget:false,comments:'',cros:[],years:{'2025':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2026':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'Chemistry, Manufacturing & Controls (CMC)',name:'Polymorph & Salt Screening',commitmentStatus:'Optional',includeDD:false,activeInBudget:false,comments:'',cros:[],years:{'2025':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2026':{q1b:30000,q1a:0,q2b:80000,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'Chemistry, Manufacturing & Controls (CMC)',name:'API Synthesis – 3-Month Toxicology Study',commitmentStatus:'Optional',includeDD:false,activeInBudget:false,comments:'',cros:[],years:{'2025':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2026':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:30000,q3a:0,q4b:100000,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'Toxicology',name:'28-Day Toxicology Study',commitmentStatus:'Committed',includeDD:true,activeInBudget:true,comments:'',cros:[],years:{'2025':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:104840,q4b:0,q4a:259745},'2026':{q1b:185415,q1a:17785,q2b:200000,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'Toxicology',name:'3-Month Toxicology Study',commitmentStatus:'Contingent',includeDD:false,activeInBudget:false,comments:'',cros:[],years:{'2025':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2026':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:240000,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'General & Administrative (G&A)',name:'Scientific Consultants & Advisory',commitmentStatus:'Committed',includeDD:true,activeInBudget:true,comments:'',cros:[],years:{'2025':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:7500,q4b:0,q4a:10588},'2026':{q1b:30000,q1a:23537.75,q2b:30000,q2a:0,q3b:30000,q3a:0,q4b:30000,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'General & Administrative (G&A)',name:'Contingency Reserve (10%)',commitmentStatus:'High Priority',includeDD:true,activeInBudget:true,comments:'',cros:[],years:{'2025':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2026':{q1b:46000,q1a:0,q2b:46000,q2a:0,q3b:46000,q3a:0,q4b:46000,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'General & Administrative (G&A)',name:'General & Administrative Expenses',commitmentStatus:'Committed',includeDD:true,activeInBudget:true,comments:'',cros:[],years:{'2025':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2026':{q1b:135000,q1a:3204.13,q2b:135000,q2a:0,q3b:135000,q3a:0,q4b:135000,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'General & Administrative (G&A)',name:'Legal & Compliance',commitmentStatus:'Committed',includeDD:true,activeInBudget:true,comments:'',cros:[],years:{'2025':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2026':{q1b:9000,q1a:2350,q2b:9000,q2a:0,q3b:9000,q3a:0,q4b:9000,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
-  {id:uid(),category:'General & Administrative (G&A)',name:'Marketing & Communications',commitmentStatus:'Committed',includeDD:true,activeInBudget:true,comments:'',cros:[],years:{'2025':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0},'2026':{q1b:3000,q1a:5924.15,q2b:3000,q2a:0,q3b:3000,q3a:0,q4b:3000,q4a:0},'2027':{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0}}},
+  mkA('Research & Development (R&D)','ASRI Technology License Fee','Committed',0,0,0,200000,250000,50000,550000,0,0,0,0,0),
+  mkA('Research & Development (R&D)','Indication Selection & Therapeutic Area Research','Committed',0,0,112395,0,0,0,0,0,0,0,0,0),
+  mkA('Research & Development (R&D)','Lead Compound Synthesis – Research Grade','Committed',20000,15000,0,0,0,0,0,0,0,0,0,0),
+  mkA('Research & Development (R&D)','In Vitro Pharmacology & Receptor Binding Assays','Committed',25000,15000,0,0,0,0,0,0,0,0,0,0),
+  mkA('Research & Development (R&D)','Pharmacokinetics (PK) & ADME Studies','Committed',0,50000,0,0,0,0,0,0,0,0,0,0),
+  mkA('Research & Development (R&D)','Safety Panel & CYP450 Inhibition Profiling','Committed',0,45000,0,0,0,0,0,0,0,0,0,0),
+  mkA('Preclinical','In Vivo Efficacy Validation Studies','Committed',0,70000,13000,0,0,0,0,0,0,0,0,0),
+  mkA('Preclinical','Additional Research-Grade API Synthesis','Committed',0,20000,30000,0,0,0,0,0,0,0,0,0),
+  mkA('Preclinical','Proof-of-Concept (PoC) Study Preparation','Committed',0,0,20000,60000,60000,60000,0,0,0,0,0,0),
+  mkA('Preclinical','Proof-of-Concept (PoC) Study Initiation','Committed (Extension 1)',0,0,0,0,0,0,250000,300000,400000,0,0,0),
+  mkA('Toxicology','28-Day Repeat Dose GLP Toxicology Study','Committed',0,0,150000,100000,300000,200000,0,0,0,0,0,0),
+  mkA('Toxicology','API Synthesis for 3-Month Toxicology Study','Optional',0,0,0,0,0,0,30000,100000,0,0,0,0),
+  mkA('Toxicology','3-Month Repeat Dose GLP Toxicology Study','Optional',0,0,0,0,0,0,0,240000,360000,360000,120000,0),
+  mkA('Chemistry, Manufacturing & Controls (CMC)','Polymorph & Salt Form Screening','Committed',0,0,0,0,30000,80000,0,0,0,0,0,0),
+  mkA('Chemistry, Manufacturing & Controls (CMC)','Non-GMP & GMP API Synthesis for Clinical Trials','Committed',0,25000,75000,80000,80000,0,0,0,0,0,0,0),
+  mkA('Chemistry, Manufacturing & Controls (CMC)','GMP Drug Product Formulation Development','Committed',0,0,35000,30000,70000,120000,0,0,0,0,0,0),
+  mkA('Chemistry, Manufacturing & Controls (CMC)','GMP API Synthesis for Phase 2 Clinical Trials','Optional',0,0,0,0,0,0,0,0,300000,0,0,0),
+  mkA('Regulatory','Pre-IND Meeting Preparation & Submission (NCE/ASRI)','Optional',0,0,0,0,50000,50000,0,0,0,0,0,0),
+  mkA('Regulatory','IND Application Preparation & Submission (Israel)','Committed',24350,43800,60000,60000,50000,10000,0,0,0,0,0,0),
+  mkA('Regulatory','Pre-IND Meeting Preparation – Israel Program','High Priority',0,0,0,0,0,0,0,0,0,0,0,0),
+  mkA('General & Administrative (G&A)','Scientific & Regulatory Consultants','Committed / High Priority',30800,15000,0,30000,0,0,0,0,0,0,0,0),
+  mkA('General & Administrative (G&A)','Contingency Reserve (10%)','High Priority',0,2500,46000,46000,46000,46000,46000,46000,0,0,0,0),
 ];
 const INIT_YEARS=['2025','2026','2027'];
 const INIT_CONTRIBUTIONS=[
@@ -1845,116 +1837,147 @@ function enableColResize(t){
 }
 
 function Dashboard({acts,years,catNames}){
-  const active=acts.filter(a=>a.activeInBudget);
-  const allB=a=>sum(years.map(y=>effBgt(a,y)));
-  const allA=a=>sum(years.map(y=>yAct(a.years[y])));
-  const tB=sum(active.map(allB)),tA=sum(active.map(allA)),tV=r(tB-tA);
-  const pct=tB>0?Math.round(tA/tB*100):0;
-  const allCats=[...new Set(acts.map(a=>a.category))];
-  const dispCat=c=>(catNames&&catNames[c])||c;
+  const[hiddenDashYears,setHiddenDashYears]=React.useState([]);
   const[chartType,setChartType]=React.useState('bar');
   const[pieMetric,setPieMetric]=React.useState('budget');
-  const[selectedCats,setSelectedCats]=React.useState(null);
   const[showSliceLabels,setShowSliceLabels]=React.useState(false);
-  const effCats=(selectedCats===null?allCats:allCats.filter(c=>selectedCats.includes(c)));
-  const toggleCat=c=>setSelectedCats(prev=>{
-    const cur=prev===null?[...allCats]:prev;
-    if(cur.includes(c)){const n=cur.filter(x=>x!==c);return n.length===0?cur:n;}
-    return [...cur,c];
-  });
-  const selectAll=()=>setSelectedCats(null);
+  const[catGroups,setCatGroups]=React.useState([]);
+  const[editingGroup,setEditingGroup]=React.useState(null);
   const canvasRef=useRef(),chartRef=useRef();
+
+  const visYears=years.filter(y=>!hiddenDashYears.includes(y));
+  const toggleDashYear=y=>setHiddenDashYears(h=>h.includes(y)?h.filter(x=>x!==y):[...h,y]);
+
+  const active=acts.filter(a=>a.activeInBudget);
+  const allCats=[...new Set(acts.map(a=>a.category))];
+  const dispCat=c=>(catNames&&catNames[c])||c;
+
+  const aB=a=>sum(visYears.map(y=>effBgt(a,y)));
+  const aA=a=>sum(visYears.map(y=>yAct(a.years[y])));
+
+  const tB=sum(active.map(aB)),tA=sum(active.map(aA)),tV=r(tB-tA);
+  const pct=tB>0?Math.round(tA/tB*100):0;
+
+  const catBgt=c=>sum(acts.filter(a=>a.category===c&&a.activeInBudget).map(aB));
+  const catAct=c=>sum(acts.filter(a=>a.category===c&&a.activeInBudget).map(aA));
+
+  // Build chart entries: named groups first, then ungrouped cats individually
+  const groupedCatSet=new Set(catGroups.flatMap(g=>g.cats));
+  const ungroupedCats=allCats.filter(c=>!groupedCatSet.has(c));
+  const entries=[
+    ...catGroups.map(g=>({label:g.name,bgt:sum(g.cats.map(catBgt)),act:sum(g.cats.map(catAct)),col:PURPLE,id:g.id})),
+    ...ungroupedCats.map(c=>({label:dispCat(c),bgt:catBgt(c),act:catAct(c),col:cc(c),id:c}))
+  ];
+  const chartLabels=entries.map(e=>e.label.length>22?e.label.slice(0,21)+'…':e.label);
+  const bgtV=entries.map(e=>e.bgt);
+  const actV=entries.map(e=>e.act);
+  const cols=entries.map(e=>e.col);
+
+  const byYear=visYears.map(y=>({y,b:sum(active.map(a=>yBgt(a.years[y]))),a:sum(active.map(a=>yAct(a.years[y])))}));
+
+  // Group editor helpers
+  const startNewGroup=()=>setEditingGroup({name:'',cats:[]});
+  const cancelEdit=()=>setEditingGroup(null);
+  const saveGroup=()=>{
+    if(!editingGroup.name.trim()||editingGroup.cats.length<2)return;
+    if(editingGroup.id){
+      setCatGroups(gs=>gs.map(g=>g.id===editingGroup.id?{...editingGroup}:g));
+    }else{
+      setCatGroups(gs=>[...gs,{...editingGroup,id:Date.now()}]);
+    }
+    setEditingGroup(null);
+  };
+  const deleteGroup=id=>setCatGroups(gs=>gs.filter(g=>g.id!==id));
+  const editGroup=g=>setEditingGroup({...g,cats:[...g.cats]});
+  const toggleEditCat=c=>setEditingGroup(eg=>({...eg,cats:eg.cats.includes(c)?eg.cats.filter(x=>x!==c):[...eg.cats,c]}));
+  const otherGroupCats=editingGroup?new Set(catGroups.filter(g=>g.id!==editingGroup.id).flatMap(g=>g.cats)):new Set();
+
   useEffect(()=>{
     if(!canvasRef.current)return;
-    const cats=effCats.length>0?effCats:allCats;
-    const bgtV=cats.map(c=>sum(acts.filter(a=>a.category===c&&a.activeInBudget).map(allB)));
-    const actV=cats.map(c=>sum(acts.filter(a=>a.category===c&&a.activeInBudget).map(allA)));
-    const cols=cats.map(c=>cc(c));
     if(chartRef.current)chartRef.current.destroy();
+    const ctx=canvasRef.current.getContext('2d');
     if(chartType==='pie'){
       const vals=(pieMetric==='budget'?bgtV:actV).map(v=>Math.max(v,0));
-      chartRef.current=new Chart(canvasRef.current.getContext('2d'),{
+      chartRef.current=new Chart(ctx,{
         type:'doughnut',
-        data:{
-          labels:cats.map(c=>dispCat(c)),
-          datasets:[{data:vals,backgroundColor:cols.map(c=>c+'cc'),borderColor:cols,borderWidth:2,hoverOffset:10}]
-        },
+        data:{labels:chartLabels,datasets:[{data:vals,backgroundColor:cols.map(c=>c+'cc'),borderColor:cols,borderWidth:2,hoverOffset:10}]},
         options:{
-          responsive:true,maintainAspectRatio:false,cutout:'52%',
-          layout:{padding:{right:8}},
+          responsive:true,maintainAspectRatio:false,cutout:'52%',layout:{padding:{right:8}},
           plugins:{
-            legend:{
-              position:'left',
-              align:'center',
-              labels:{boxWidth:14,font:{size:11},padding:10,
-                generateLabels:chart=>{
-                  const ds=chart.data.datasets[0];
-                  const tot=ds.data.reduce((a,b)=>a+b,0);
-                  return chart.data.labels.map((l,i)=>({
-                    text:l+'  '+(tot>0?Math.round(ds.data[i]/tot*100)+'%':''),
-                    fillStyle:ds.backgroundColor[i],strokeStyle:ds.borderColor[i],lineWidth:1,index:i,hidden:false
-                  }));
-                }
+            legend:{position:'left',align:'center',labels:{boxWidth:14,font:{size:11},padding:10,
+              generateLabels:chart=>{
+                const ds=chart.data.datasets[0];const tot=ds.data.reduce((a,b)=>a+b,0);
+                return chart.data.labels.map((l,i)=>({text:l+'  '+(tot>0?Math.round(ds.data[i]/tot*100)+'%':''),fillStyle:ds.backgroundColor[i],strokeStyle:ds.borderColor[i],lineWidth:1,index:i,hidden:false}));
               }
-            },
-            tooltip:{callbacks:{label:ctx=>{
-              const v=ctx.parsed;
-              const tot=ctx.dataset.data.reduce((a,b)=>a+b,0);
-              const p=tot>0?Math.round(v/tot*100):0;
-              return ' '+fmtRaw(v)+'  ('+p+'%)';
-            }}}
+            }},
+            tooltip:{callbacks:{label:ctx=>{const v=ctx.parsed;const tot=ctx.dataset.data.reduce((a,b)=>a+b,0);const p=tot>0?Math.round(v/tot*100):0;return' '+fmtRaw(v)+'  ('+p+'%)';}}}
           }
         },
-        plugins:[{
-          id:'sliceLabels',
-          afterDraw(chart){
-            if(!showSliceLabels)return;
-            const ctx=chart.ctx;
-            const ds=chart.data.datasets[0];
-            const tot=ds.data.reduce((a,b)=>a+b,0);
-            const meta=chart.getDatasetMeta(0);
-            meta.data.forEach((el,i)=>{
-              const val=ds.data[i];
-              const pct=tot>0?Math.round(val/tot*100):0;
-              if(pct<3)return;
-              const {x,y}=el.getCenterPoint();
-              ctx.save();
-              ctx.textAlign='center';ctx.textBaseline='middle';
-              ctx.shadowColor='rgba(0,0,0,0.5)';ctx.shadowBlur=4;
-              ctx.font='bold 12px sans-serif';ctx.fillStyle='#fff';
-              const label=chart.data.labels[i];
-              const short=label.length>14?label.slice(0,13)+'…':label;
-              ctx.fillText(short,x,y-7);
-              ctx.font='bold 11px sans-serif';
-              ctx.fillText(pct+'%',x,y+7);
-              ctx.restore();
-            });
+        plugins:[{id:'sliceLabels',afterDraw(chart){
+          if(!showSliceLabels)return;
+          const ctx=chart.ctx;const ds=chart.data.datasets[0];const tot=ds.data.reduce((a,b)=>a+b,0);const meta=chart.getDatasetMeta(0);
+          meta.data.forEach((el,i)=>{
+            const val=ds.data[i];const pct=tot>0?Math.round(val/tot*100):0;if(pct<3)return;
+            const{x,y}=el.getCenterPoint();
+            ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.shadowColor='rgba(0,0,0,0.5)';ctx.shadowBlur=4;
+            ctx.font='bold 12px sans-serif';ctx.fillStyle='#fff';
+            const label=chart.data.labels[i];const short=label.length>14?label.slice(0,13)+'…':label;
+            ctx.fillText(short,x,y-7);ctx.font='bold 11px sans-serif';ctx.fillText(pct+'%',x,y+7);ctx.restore();
+          });
+        }}]
+      });
+    }else if(chartType==='efficiency'){
+      const effVals=bgtV.map((b,i)=>b>0?Math.round(actV[i]/b*100):0);
+      const barCols=effVals.map(v=>v>100?'#dc2626bb':v>80?'#f59e0bbb':v>50?'#16a34abb':'#2563ebbb');
+      const barBorder=effVals.map(v=>v>100?'#dc2626':v>80?'#f59e0b':v>50?'#16a34a':'#2563eb');
+      chartRef.current=new Chart(ctx,{
+        type:'bar',
+        data:{labels:chartLabels,datasets:[{label:'% Budget Utilized',data:effVals,backgroundColor:barCols,borderColor:barBorder,borderWidth:2,borderRadius:4}]},
+        options:{
+          indexAxis:'y',responsive:true,maintainAspectRatio:false,
+          plugins:{
+            legend:{display:false},
+            tooltip:{callbacks:{label:ctx=>{const i=ctx.dataIndex;return[' '+ctx.raw+'% utilized',' Budget: '+fmtRaw(bgtV[i]),' Actual: '+fmtRaw(actV[i])];}}}
+          },
+          scales:{
+            x:{min:0,max:Math.max(110,...effVals.map(v=>Math.ceil((v+10)/10)*10)),ticks:{callback:v=>v+'%',font:{size:9}},grid:{color:'#f0f0f6'}},
+            y:{ticks:{font:{size:9}},grid:{display:false}}
           }
-        }]
+        }
       });
     }else{
-      chartRef.current=new Chart(canvasRef.current.getContext('2d'),{
+      chartRef.current=new Chart(ctx,{
         type:'bar',
-        data:{
-          labels:cats.map(c=>{const n=dispCat(c);return n.length>22?n.slice(0,22)+'…':n;}),
-          datasets:[
-            {label:'Budget',data:bgtV,backgroundColor:cols.map(c=>c+'33'),borderColor:cols,borderWidth:2,borderRadius:4},
-            {label:'Actual',data:actV,backgroundColor:cols.map(c=>c+'99'),borderRadius:4},
-          ]
-        },
+        data:{labels:chartLabels,datasets:[
+          {label:'Budget',data:bgtV,backgroundColor:cols.map(c=>c+'33'),borderColor:cols,borderWidth:2,borderRadius:4},
+          {label:'Actual',data:actV,backgroundColor:cols.map(c=>c+'99'),borderRadius:4},
+        ]},
         options:{responsive:true,maintainAspectRatio:false,
           plugins:{legend:{position:'top',labels:{boxWidth:12,font:{size:10}}}},
-          scales:{x:{grid:{display:false},ticks:{font:{size:9}}},y:{grid:{color:'#f0f0f6'},ticks:{callback:v=>`$${(v/1e3).toFixed(0)}K`,font:{size:9}}}}}
+          scales:{x:{grid:{display:false},ticks:{font:{size:9}}},y:{grid:{color:'#f0f0f6'},ticks:{callback:v=>`$${(v/1e3).toFixed(0)}K`,font:{size:9}}}}
+        }
       });
     }
     return()=>{if(chartRef.current)chartRef.current.destroy();};
-  },[acts,years,chartType,pieMetric,selectedCats,showSliceLabels]);
-  const byYear=years.map(y=>({y,b:sum(active.map(a=>yBgt(a.years[y]))),a:sum(active.map(a=>yAct(a.years[y])))}));
-  const isAllSel=selectedCats===null||selectedCats.length===allCats.length;
+  },[acts,visYears.join(','),chartType,pieMetric,catGroups,showSliceLabels,hiddenDashYears.join(',')]);
+
   return(
     <div className="space-y-5">
+      {years.length>1&&(
+        <div className="bg-white rounded-2xl px-5 py-3 shadow-sm flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider mr-1">Years:</span>
+          {years.map(y=>{const on=!hiddenDashYears.includes(y);return(
+            <button key={y} onClick={()=>toggleDashYear(y)}
+              className="px-3 py-1 rounded-full text-xs font-bold border-2 transition-all"
+              style={on?{background:NAVY,color:'white',borderColor:NAVY}:{background:'#f3f4f6',color:'#9ca3af',borderColor:'#e5e7eb'}}>
+              FY{y}
+            </button>
+          );})}
+          {hiddenDashYears.length>0&&<button onClick={()=>setHiddenDashYears([])} className="text-xs text-indigo-500 font-bold hover:underline ml-1">All years</button>}
+        </div>
+      )}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[{l:'Total Programme Budget',v:fmtK(tB),s:`${years.length} fiscal years · ${acts.length} activities`,i:'📋',c:NAVY},
+        {[{l:'Total Programme Budget',v:fmtK(tB),s:`${visYears.length} fiscal year${visYears.length===1?'':'s'} · ${acts.length} activities`,i:'📋',c:NAVY},
           {l:'Total Spent (Actual)',v:fmtK(tA),s:`${pct}% of budget`,i:'✅',c:'#16a34a'},
           {l:'Remaining Budget',v:fmtK(tB-tA),s:'committed, not yet spent',i:'💰',c:'#2563eb'},
           {l:'Variance',v:fmtK(Math.abs(tV)),s:tV>=0?'✓ Underspent':'⚠ Overspent',i:tV>=0?'📉':'📈',c:tV>=0?'#16a34a':'#dc2626'},
@@ -1967,89 +1990,129 @@ function Dashboard({acts,years,catNames}){
         <div className="h-4 bg-gray-100 rounded-full overflow-hidden"><div className="h-full rounded-full" style={{width:`${Math.min(pct,100)}%`,background:`linear-gradient(90deg,${NAVY},${PURPLE})`}}/></div>
         <div className="flex justify-between text-xs text-gray-400 mt-1"><span>$0</span><span className="font-bold" style={{color:PURPLE}}>{pct}% utilised</span><span>{fmtK(tB)}</span></div>
       </div>
-      <div className="grid gap-4" style={{gridTemplateColumns:`repeat(${byYear.length},1fr)`}}>
-        {byYear.map(({y,b,a})=>{const v=r(b-a);const p=b>0?Math.round(a/b*100):0;return(
-          <div key={y} className="bg-white rounded-2xl p-4 shadow-sm">
-            <div className="font-black text-gray-800 mb-3">FY{y}</div>
-            <div className="space-y-1 text-xs">
-              <div className="flex justify-between"><span className="text-gray-500">Budget</span><span className="font-bold text-blue-700">{fmtRaw(b)}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Actual</span><span className="font-bold text-green-600">{fmtRaw(a)}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Variance</span><span className={`font-bold ${v>=0?'text-green-600':'text-red-600'}`}>{v>=0?'+':''}{fmtRaw(v)}</span></div>
+      {visYears.length>0?(
+        <div className="grid gap-4" style={{gridTemplateColumns:`repeat(${visYears.length},1fr)`}}>
+          {byYear.map(({y,b,a})=>{const v=r(b-a);const p=b>0?Math.round(a/b*100):0;return(
+            <div key={y} className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-black text-gray-800 mb-3">FY{y}</div>
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between"><span className="text-gray-500">Budget</span><span className="font-bold text-blue-700">{fmtRaw(b)}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Actual</span><span className="font-bold text-green-600">{fmtRaw(a)}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Variance</span><span className={`font-bold ${v>=0?'text-green-600':'text-red-600'}`}>{v>=0?'+':''}{fmtRaw(v)}</span></div>
+              </div>
+              <div className="mt-3 h-2 bg-gray-100 rounded-full overflow-hidden"><div className="h-full rounded-full bg-green-500" style={{width:`${Math.min(p,100)}%`}}/></div>
+              <div className="text-xs text-gray-400 mt-1 text-right">{p}% spent</div>
             </div>
-            <div className="mt-3 h-2 bg-gray-100 rounded-full overflow-hidden"><div className="h-full rounded-full bg-green-500" style={{width:`${Math.min(p,100)}%`}}/></div>
-            <div className="text-xs text-gray-400 mt-1 text-right">{p}% spent</div>
-          </div>
-        );})}
-      </div>
+          );})}
+        </div>
+      ):(
+        <div className="bg-white rounded-2xl p-8 shadow-sm text-center text-gray-400 text-sm">All years hidden — select a year above to show it.</div>
+      )}
       <div className="bg-white rounded-2xl p-5 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <h3 className="font-bold text-gray-800">Budget vs. Actual by Category</h3>
           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-bold">
-              <button onClick={()=>setChartType('bar')}
-                className="px-3 py-1.5 transition-colors"
-                style={{background:chartType==='bar'?NAVY:'white',color:chartType==='bar'?'white':'#6b7280'}}>
-                ▮▮ Bar
-              </button>
-              <button onClick={()=>setChartType('pie')}
-                className="px-3 py-1.5 transition-colors border-l border-gray-200"
-                style={{background:chartType==='pie'?PURPLE:'white',color:chartType==='pie'?'white':'#6b7280'}}>
-                ● Pie
-              </button>
+              <button onClick={()=>setChartType('bar')} className="px-3 py-1.5 transition-colors"
+                style={{background:chartType==='bar'?NAVY:'white',color:chartType==='bar'?'white':'#6b7280'}}>▮▮ Bar</button>
+              <button onClick={()=>setChartType('pie')} className="px-3 py-1.5 transition-colors border-l border-gray-200"
+                style={{background:chartType==='pie'?PURPLE:'white',color:chartType==='pie'?'white':'#6b7280'}}>● Pie</button>
+              <button onClick={()=>setChartType('efficiency')} className="px-3 py-1.5 transition-colors border-l border-gray-200"
+                style={{background:chartType==='efficiency'?'#f59e0b':'white',color:chartType==='efficiency'?'white':'#6b7280'}}>📊 Efficiency</button>
             </div>
             {chartType==='pie'&&(
               <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-bold">
-                <button onClick={()=>setPieMetric('budget')}
-                  className="px-3 py-1.5 transition-colors"
-                  style={{background:pieMetric==='budget'?'#2563eb':'white',color:pieMetric==='budget'?'white':'#6b7280'}}>
-                  Budget
-                </button>
-                <button onClick={()=>setPieMetric('actual')}
-                  className="px-3 py-1.5 transition-colors border-l border-gray-200"
-                  style={{background:pieMetric==='actual'?'#16a34a':'white',color:pieMetric==='actual'?'white':'#6b7280'}}>
-                  Actual
-                </button>
+                <button onClick={()=>setPieMetric('budget')} className="px-3 py-1.5 transition-colors"
+                  style={{background:pieMetric==='budget'?'#2563eb':'white',color:pieMetric==='budget'?'white':'#6b7280'}}>Budget</button>
+                <button onClick={()=>setPieMetric('actual')} className="px-3 py-1.5 transition-colors border-l border-gray-200"
+                  style={{background:pieMetric==='actual'?'#16a34a':'white',color:pieMetric==='actual'?'white':'#6b7280'}}>Actual</button>
               </div>
             )}
             {chartType==='pie'&&(
               <button onClick={()=>setShowSliceLabels(v=>!v)}
                 className="px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors"
-                style={{borderColor:'#d1d5db',background:showSliceLabels?'#7c3aed':'white',color:showSliceLabels?'white':'#6b7280'}}>
+                style={{borderColor:'#d1d5db',background:showSliceLabels?PURPLE:'white',color:showSliceLabels?'white':'#6b7280'}}>
                 🏷️ Slice labels
               </button>
             )}
           </div>
         </div>
-        <div className="flex flex-wrap gap-1.5 mb-4 items-center">
-          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider" style={{marginRight:2}}>Categories:</span>
-          <button onClick={selectAll}
-            className="px-2.5 py-1 rounded-full text-xs font-bold border transition-all"
-            style={{background:isAllSel?NAVY:'white',color:isAllSel?'white':'#6b7280',borderColor:isAllSel?NAVY:'#e5e7eb'}}>
-            All
-          </button>
-          {allCats.map(c=>{
-            const sel=selectedCats===null||selectedCats.includes(c);
-            const col=cc(c);
-            const lbl=dispCat(c);
-            return(
-              <button key={c} onClick={()=>toggleCat(c)}
-                className="px-2.5 py-1 rounded-full text-xs border transition-all"
-                style={{
-                  background:sel?col+'22':'white',
-                  color:sel?col:'#9ca3af',
-                  borderColor:sel?col:'#e5e7eb',
-                  fontWeight:sel?700:400,
-                }}>
-                {lbl.length>22?lbl.slice(0,22)+'…':lbl}
+        {chartType==='efficiency'&&(
+          <div className="flex gap-3 text-xs mb-3 flex-wrap">
+            <span className="flex items-center gap-1"><span style={{width:10,height:10,borderRadius:2,background:'#2563eb',display:'inline-block'}}/>{'< 50%'}</span>
+            <span className="flex items-center gap-1"><span style={{width:10,height:10,borderRadius:2,background:'#16a34a',display:'inline-block'}}/>50–80%</span>
+            <span className="flex items-center gap-1"><span style={{width:10,height:10,borderRadius:2,background:'#f59e0b',display:'inline-block'}}/>80–100%</span>
+            <span className="flex items-center gap-1"><span style={{width:10,height:10,borderRadius:2,background:'#dc2626',display:'inline-block'}}/>{'> 100% (over)'}</span>
+          </div>
+        )}
+        <div className="mb-4">
+          <div className="flex items-center gap-2 flex-wrap mb-2">
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">📦 Groups:</span>
+            {catGroups.map(g=>(
+              <button key={g.id} onClick={()=>editGroup(g)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border transition-all"
+                style={{background:PURPLE+'22',color:PURPLE,borderColor:PURPLE}}>
+                {g.name}
+                <span onClick={e=>{e.stopPropagation();deleteGroup(g.id);}} style={{marginLeft:4,opacity:0.55,cursor:'pointer',fontSize:'15px',lineHeight:1}}>×</span>
               </button>
-            );
-          })}
+            ))}
+            <button onClick={startNewGroup}
+              className="px-2.5 py-1 rounded-full text-xs font-bold border transition-all"
+              style={{background:'white',color:'#6b7280',borderColor:'#e5e7eb'}}>
+              + New Group
+            </button>
+          </div>
+          {editingGroup&&(
+            <div className="border border-indigo-200 rounded-xl p-3 bg-indigo-50 mt-2">
+              <div className="flex items-center gap-2 mb-2.5">
+                <input value={editingGroup.name} onChange={e=>setEditingGroup(eg=>({...eg,name:e.target.value}))}
+                  placeholder="Group name, e.g. Clinical, Dev…"
+                  className="flex-1 text-sm border border-indigo-300 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none"
+                  style={{minWidth:0}}/>
+                <button onClick={saveGroup}
+                  disabled={!editingGroup.name.trim()||editingGroup.cats.length<2}
+                  className="px-3 py-1.5 text-xs font-bold rounded-lg text-white transition-colors whitespace-nowrap"
+                  style={{background:editingGroup.name.trim()&&editingGroup.cats.length>=2?PURPLE:'#d1d5db',cursor:editingGroup.name.trim()&&editingGroup.cats.length>=2?'pointer':'default'}}>
+                  Save group
+                </button>
+                <button onClick={cancelEdit}
+                  className="px-3 py-1.5 text-xs font-bold rounded-lg border border-gray-300 text-gray-500 bg-white whitespace-nowrap">Cancel</button>
+              </div>
+              <div className="text-xs text-indigo-600 mb-2 font-medium">
+                {editingGroup.id?'Edit categories in this group:':'Select 2+ categories to merge:'}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {allCats.map(c=>{
+                  const inGroup=editingGroup.cats.includes(c);
+                  const inOther=otherGroupCats.has(c);
+                  const col=cc(c);
+                  return(
+                    <button key={c} onClick={()=>!inOther&&toggleEditCat(c)}
+                      title={inOther?'Already in another group':''}
+                      className="px-2.5 py-1 rounded-full text-xs border transition-all"
+                      style={{background:inGroup?col+'33':inOther?'#f3f4f6':'white',color:inGroup?col:inOther?'#d1d5db':'#6b7280',borderColor:inGroup?col:'#e5e7eb',fontWeight:inGroup?700:400,cursor:inOther?'not-allowed':'pointer',opacity:inOther?0.5:1}}>
+                      {dispCat(c)}
+                    </button>
+                  );
+                })}
+              </div>
+              {editingGroup.cats.length===1&&<div className="text-xs text-amber-500 mt-2">Select at least 2 categories to save a group.</div>}
+              {editingGroup.cats.length>=2&&<div className="text-xs text-indigo-400 mt-2">{editingGroup.cats.length} categories selected → will appear as one entry: <strong>{editingGroup.name||'…'}</strong></div>}
+            </div>
+          )}
+          {catGroups.length>0&&!editingGroup&&(
+            <div className="text-xs text-gray-400 mt-1">Click a group pill to edit it. Ungrouped categories still appear individually in the chart.</div>
+          )}
         </div>
-        <div style={{height:chartType==='pie'?300:260}}><canvas ref={canvasRef}/></div>
+        <div style={{height:chartType==='efficiency'?Math.max(180,entries.length*36):chartType==='pie'?300:260}}>
+          <canvas ref={canvasRef}/>
+        </div>
       </div>
     </div>
   );
 }
+
+
 
 /* ══ BUDGET TABLE ══
    compact=true  → 3 cols per year (Budget, Actual, Var)  — fits on screen
@@ -2089,7 +2152,7 @@ function BudgetTable({acts,years,hiddenYears,excludedFromTotal,compact,onUpdate,
               <th className="sticky3 py-3 px-1 w-7 text-white/60 text-xs" rowSpan={2} title="Include in DD View">DD</th>
               <th className="sticky4 py-3 px-3 text-white text-left min-w-48 font-bold" rowSpan={2}>Activity</th>
               {visYears.map(y=>(
-                <th key={y} className="py-3 px-2 text-white/80 font-bold text-center" colSpan={compact?3:11} style={{borderLeft:'4px solid rgba(255,255,255,0.45)',background:'rgba(255,255,255,0.07)'}}>FY{y}</th>
+                <th key={y} className="py-3 px-2 text-white/80 font-bold text-center" colSpan={compact?3:11} style={{borderLeft:'2px solid rgba(255,255,255,0.15)'}}>FY{y}</th>
               ))}
               <th className="py-3 px-2 font-bold text-center text-yellow-200 text-xs" rowSpan={2} style={{borderLeft:'2px solid rgba(255,255,255,0.25)',background:'rgba(255,255,255,0.08)',minWidth:100}}>Total<br/>Sel. Years</th>
               <th className="py-3 px-2 text-white/50 text-center w-16 text-xs" rowSpan={2}>⋯</th>
@@ -2098,7 +2161,7 @@ function BudgetTable({acts,years,hiddenYears,excludedFromTotal,compact,onUpdate,
               {visYears.map(y=>(
                 compact?(
                   <React.Fragment key={y}>
-                    <th className="py-1.5 px-2 text-blue-200 font-semibold text-center w-28 yr-sep-hdr">Budget</th>
+                    <th className="py-1.5 px-2 text-blue-200 font-semibold text-center w-28">Budget</th>
                     <th className="py-1.5 px-2 text-green-200 font-semibold text-center w-28">Actual</th>
                     <th className="py-1.5 px-2 text-white/70 font-semibold text-center w-24">Var</th>
                   </React.Fragment>
@@ -2106,7 +2169,7 @@ function BudgetTable({acts,years,hiddenYears,excludedFromTotal,compact,onUpdate,
                   <React.Fragment key={y}>
                     {['Q1','Q2','Q3','Q4'].map(q=>(
                       <React.Fragment key={q}>
-                        <th className={`py-1.5 px-1 text-blue-200 font-semibold text-center w-20${q==='Q1'?' yr-sep-hdr':''}`}>{q}B</th>
+                        <th className="py-1.5 px-1 text-blue-200 font-semibold text-center w-20">{q}B</th>
                         <th className="py-1.5 px-1 text-green-200 font-semibold text-center w-20">{q}A</th>
                       </React.Fragment>
                     ))}
@@ -2195,7 +2258,7 @@ function BudgetTable({acts,years,hiddenYears,excludedFromTotal,compact,onUpdate,
                                 const fb=yBgt(yd),fa=yAct(yd);
                                 return(
                                   <React.Fragment key={y}>
-                                    <td className="bgt-cell yr-sep text-right px-2 py-1.5 font-semibold cursor-pointer hover:ring-1 hover:ring-indigo-300" onClick={()=>onEdit(act)}>{fb>0?fmt$(fb):<span className="text-gray-200">—</span>}</td>
+                                    <td className="bgt-cell text-right px-2 py-1.5 font-semibold cursor-pointer hover:ring-1 hover:ring-indigo-300" onClick={()=>onEdit(act)}>{fb>0?fmt$(fb):<span className="text-gray-200">—</span>}</td>
                                     <td className="act-cell text-right px-2 py-1.5 font-semibold cursor-pointer hover:ring-1 hover:ring-green-300" onClick={()=>onEdit(act)}>{fa>0?fmt$(fa):<span className="text-gray-200">—</span>}</td>
                                     <VarTd b={fb} a={fa}/>
                                   </React.Fragment>
@@ -2208,7 +2271,7 @@ function BudgetTable({acts,years,hiddenYears,excludedFromTotal,compact,onUpdate,
                                   <React.Fragment key={y}>
                                     {['q1','q2','q3','q4'].map(q=>(
                                       <React.Fragment key={q}>
-                                        <EditCell value={yd[q+'b']} onSave={v=>onUpdate(act.id,y,q+'b',v)} cls={`bgt-cell${q==='q1'?' yr-sep':''}`}/>
+                                        <EditCell value={yd[q+'b']} onSave={v=>onUpdate(act.id,y,q+'b',v)} cls="bgt-cell"/>
                                         <EditCell value={yd[q+'a']} onSave={v=>onUpdate(act.id,y,q+'a',v)} cls="act-cell"/>
                                       </React.Fragment>
                                     ))}
@@ -2260,7 +2323,7 @@ function BudgetTable({acts,years,hiddenYears,excludedFromTotal,compact,onUpdate,
                     {compact
                       ? visYears.map(y=>{
                           const fb=sum(cActive.map(a=>actYBgt(a,y))),fa=sum(cActive.map(a=>yAct(a.years[y])));
-                          return<React.Fragment key={y}><td className="bgt-cell yr-sep text-right px-2 py-2 font-bold text-blue-800">{fmt$(fb)}</td><td className="act-cell text-right px-2 py-2 font-bold text-green-700">{fmt$(fa)}</td><VarTd b={fb} a={fa}/></React.Fragment>;
+                          return<React.Fragment key={y}><td className="bgt-cell text-right px-2 py-2 font-bold text-blue-800">{fmt$(fb)}</td><td className="act-cell text-right px-2 py-2 font-bold text-green-700">{fmt$(fa)}</td><VarTd b={fb} a={fa}/></React.Fragment>;
                         })
                       : visYears.map(y=>{
                           const qB=q=>sum(cActive.map(a=>(a.years[y]||{})[q+'b']||0));
@@ -2268,7 +2331,7 @@ function BudgetTable({acts,years,hiddenYears,excludedFromTotal,compact,onUpdate,
                           const fb=sum(cActive.map(a=>actYBgt(a,y))),fa=sum(cActive.map(a=>yAct(a.years[y])));
                           return(
                             <React.Fragment key={y}>
-                              {['q1','q2','q3','q4'].map(q=><React.Fragment key={q}><td className={`bgt-cell${q==='q1'?' yr-sep':''} text-right px-2 py-2`}>{fmt$(qB(q))}</td><td className="act-cell text-right px-2 py-2">{fmt$(qA(q))}</td></React.Fragment>)}
+                              {['q1','q2','q3','q4'].map(q=><React.Fragment key={q}><td className="bgt-cell text-right px-2 py-2">{fmt$(qB(q))}</td><td className="act-cell text-right px-2 py-2">{fmt$(qA(q))}</td></React.Fragment>)}
                               <td className="fy-bgt-cell text-right px-2 py-2 text-blue-900">{fmt$(fb)}</td>
                               <td className="fy-act-cell text-right px-2 py-2 text-green-900">{fmt$(fa)}</td>
                               <VarTd b={fb} a={fa} cls="fy-var-cell"/>
@@ -2301,7 +2364,7 @@ function BudgetTable({acts,years,hiddenYears,excludedFromTotal,compact,onUpdate,
                     ? visYears.map(y=>{
                         const fb=sum(active.map(a=>actYBgt(a,y))),fa=sum(active.map(a=>yAct(a.years[y])));
                         const v=r(fb-fa);
-                        return<React.Fragment key={y}><td className="yr-sep text-right px-2 py-3 font-black" style={{color:'#93c5fd'}}>{fmt$(fb)}</td><td className="text-right px-2 py-3 font-black" style={{color:'#c4b5fd'}}>{fmt$(fa)}</td><td className="text-right px-2 py-3 font-black" style={{color:v>=0?'#4ade80':'#f87171'}}>{v>=0?'+':''}{fmt$(v)}</td></React.Fragment>;
+                        return<React.Fragment key={y}><td className="text-right px-2 py-3 font-black" style={{background:'#ffffff15'}}>{fmt$(fb)}</td><td className="text-right px-2 py-3 font-black" style={{background:'#22c55e22'}}>{fmt$(fa)}</td><td className="text-right px-2 py-3 font-black" style={{color:v>=0?'#4ade80':'#f87171'}}>{v>=0?'+':''}{fmt$(v)}</td></React.Fragment>;
                       })
                     : visYears.map(y=>{
                         const qB=q=>sum(active.map(a=>(a.years[y]||{})[q+'b']||0));
@@ -2310,10 +2373,10 @@ function BudgetTable({acts,years,hiddenYears,excludedFromTotal,compact,onUpdate,
                         const v=r(fb-fa);
                         return(
                           <React.Fragment key={y}>
-                            {['q1','q2','q3','q4'].map(q=><React.Fragment key={q}><td className={`${q==='q1'?'yr-sep ':''}text-right px-2 py-3 font-bold`} style={{color:'#93c5fd'}}>{fmt$(qB(q))}</td><td className="text-right px-2 py-3 font-bold" style={{color:'#c4b5fd'}}>{fmt$(qA(q))}</td></React.Fragment>)}
+                            {['q1','q2','q3','q4'].map(q=><React.Fragment key={q}><td className="text-right px-2 py-3 font-bold" style={{background:'#ffffff15'}}>{fmt$(qB(q))}</td><td className="text-right px-2 py-3 font-bold" style={{background:'#22c55e22'}}>{fmt$(qA(q))}</td></React.Fragment>)}
                             <td className="text-right px-2 py-3 font-black" style={{borderLeft:'3px solid #93c5fd',color:'#93c5fd'}}>{fmt$(fb)}</td>
                             <td className="text-right px-2 py-3 font-black" style={{color:'#c4b5fd'}}>{fmt$(fa)}</td>
-                            <td className="text-right px-2 py-3 font-black" style={{color:v>=0?'#4ade80':'#f87171'}}>{v>=0?'+':''}{fmt$(v)}</td>
+                            <td className={`text-right px-2 py-3 font-black ${v>=0?'text-green-300':'text-red-300'}`}>{v>=0?'+':''}{fmt$(v)}</td>
                           </React.Fragment>
                         );
                       })
@@ -2613,6 +2676,7 @@ function ProgrammeTotal({acts,years,catNames,catOrder}){
               <th className="py-3 px-2 text-white font-bold text-center" colSpan={3} style={{background:'rgba(255,255,255,.15)'}}>TOTAL {visYears.join('+')}</th>
             </tr>
             <tr style={{background:NAVY+'cc'}}>
+              <th/><th/>
               {visYears.map(y=><React.Fragment key={y}><th className="py-1.5 px-2 text-blue-200 text-center">Budget</th><th className="py-1.5 px-2 text-green-200 text-center">Actual</th></React.Fragment>)}
               <th className="py-1.5 px-2 text-white/70 text-center">Budget</th>
               <th className="py-1.5 px-2 text-white/70 text-center">Actual</th>
@@ -2868,7 +2932,7 @@ function TimelineTab({acts,years}){
 /* ══════════════════════════════════════════
    MAIN APP
 ══════════════════════════════════════════ */
-const SK='ariadne_v6';
+const SK='ariadne_v5';
 function App(){
   const saved=useMemo(()=>{try{const s=localStorage.getItem(SK);return s?JSON.parse(s):null;}catch{return null;}},[]);
 
@@ -2883,11 +2947,11 @@ function App(){
   // ── JSONBin cloud sync state ──
   const[syncStatus,setSyncStatus]=useState('idle');
   const[syncError,setSyncError]=useState('');
-  const[lastSync,setLastSync]=useState(()=>{const s=localStorage.getItem('ariadne_lastsync');return s?new Date(s):null;});
+  const[lastSync,setLastSync]=useState(null);
+  const[savedBy,setSavedBy]=useState(null);
   const[lastRemoteSavedAt,setLastRemoteSavedAt]=useState(null);
   const lrsaRef=useRef(null);
   const setLRSA=v=>{lrsaRef.current=v;setLastRemoteSavedAt(v);};
-  const[savedBy,setSavedBy]=useState(()=>localStorage.getItem('ariadne_savedby')||null);
   const[userName,setUserNameState]=useState(()=>localStorage.getItem('ariadne_username')||'');
   const setUserName=v=>{setUserNameState(v);localStorage.setItem('ariadne_username',v);};
   const[customStatuses,setCustomStatuses]=useState(()=>saved?.customStatuses||[]);
@@ -3227,8 +3291,7 @@ function App(){
       const d=await jbPull();
       if(d){applyRemote(d);setSyncStatus('pulled');setLRSA(d._savedAt||null);}
       else setSyncStatus('idle');
-      const pt=new Date();setLastSync(pt);localStorage.setItem('ariadne_lastsync',pt.toISOString());
-      if(d&&d._savedBy){setSavedBy(d._savedBy);localStorage.setItem('ariadne_savedby',d._savedBy);}
+      setLastSync(new Date());
       setTimeout(()=>setSyncStatus(s=>s==='pulled'?'idle':s),2500);
     }catch(e){setSyncStatus('error');setSyncError(e.message);alert('Pull failed: '+e.message);}
   };
@@ -3236,19 +3299,16 @@ function App(){
     if(!userName.trim()){alert('Please enter your name in the sync bar first.');return;}
     setSyncStatus('pushing');setSyncError('');
     try{
-      // Overwrite guard: check if remote was updated since our last sync
       const remote=await jbPull();
       if(remote&&remote._savedAt&&lrsaRef.current&&remote._savedAt!==lrsaRef.current){
         const who=remote._savedBy||'a colleague';
         const when=new Date(remote._savedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-        if(!confirm('⚠️ Overwrite warning\n\n'+who+' saved changes at '+when+' — after your last sync.\n\nPushing now will overwrite their work. Are you sure?')){
+        if(!confirm('\u26a0\ufe0f Overwrite warning\n\n'+who+' saved changes at '+when+' \u2014 after your last sync.\n\nPushing now will overwrite their work. Are you sure?')){
           setSyncStatus('idle');return;
         }
       }
       await jbPush(buildPayload());
-      const pushT=new Date();setSyncStatus('pushed');
-      setSavedBy(userName);localStorage.setItem('ariadne_savedby',userName);
-      setLastSync(pushT);localStorage.setItem('ariadne_lastsync',pushT.toISOString());
+      setSyncStatus('pushed');setSavedBy(userName);setLastSync(new Date());
       setTimeout(()=>setSyncStatus(s=>s==='pushed'?'idle':s),2500);
     }catch(e){setSyncStatus('error');setSyncError(e.message);alert('Push failed: '+e.message);}
   };
@@ -3313,11 +3373,10 @@ function App(){
   };
   const exportExcel=()=>{
     const wb=XLSX.utils.book_new();
-    // ── Colour palette ──────────────────────────────────────────────────────────
+    // ── Colour palette (no # prefix for xlsx-js-style) ──────────────────────
     const CN='1A126E',CP='3F3AA5',CW='FFFFFF',CPALE='EEEDF8';
     const CBGT='EFF6FF',CACT='F0FFF4',CVPOS='DCFCE7',CVNEG='FEE2E2';
     const CAT_HEX={
-      'Licensing & Intellectual Property':'D97706',
       'Research & Development (R&D)':'4F46E5',
       'Preclinical':'0891B2',
       'Toxicology':'DC2626',
@@ -3325,14 +3384,14 @@ function App(){
       'Regulatory':'7C3AED',
       'General & Administrative (G&A)':'6B7280',
     };
-    // ── Style helpers ────────────────────────────────────────────────────────────
-    const mf=rgb=>({patternType:'solid',fgColor:{rgb}});
+    // ── Style helpers ────────────────────────────────────────────────────────
+    const mf=(rgb)=>({patternType:'solid',fgColor:{rgb}});
     const mn=(rgb,bold=false,sz=10)=>({color:{rgb},bold,sz,name:'Calibri'});
     const ma=(h='left',v='center',wrap=false)=>({horizontal:h,vertical:v,wrapText:wrap});
-    const mb=c=>({top:{style:'thin',color:{rgb:c}},bottom:{style:'thin',color:{rgb:c}},left:{style:'thin',color:{rgb:c}},right:{style:'thin',color:{rgb:c}}});
+    const mb=(c='D1D5DB')=>({top:{style:'thin',color:{rgb:c}},bottom:{style:'thin',color:{rgb:c}},left:{style:'thin',color:{rgb:c}},right:{style:'thin',color:{rgb:c}}});
     const sTitle={fill:mf(CN),font:mn(CW,true,13),alignment:ma('left')};
     const sDate={fill:mf(CPALE),font:mn('374151',false,9),alignment:ma('left')};
-    const sHdr={fill:mf(CN),font:mn(CW,true,10),alignment:ma('center','center'),border:mb('0F0A4B')};
+    const sHdr={fill:mf(CN),font:mn(CW,true,10),alignment:ma('center','center',true),border:mb('0F0A4B')};
     const sBgt={fill:mf(CBGT),font:mn('1E3A5F',false,10),alignment:ma('right'),border:mb('DBEAFE')};
     const sAct={fill:mf(CACT),font:mn('14532D',false,10),alignment:ma('right'),border:mb('BBF7D0')};
     const sVP={fill:mf(CVPOS),font:mn('15803D',false,10),alignment:ma('right'),border:mb('BBF7D0')};
@@ -3349,319 +3408,115 @@ function App(){
       if(v<0)return bold?{...sVN,font:mn('B91C1C',true,10)}:sVN;
       return bold?{...sVZ,font:mn('6B7280',true,10)}:sVZ;
     };
+    // ── Build rows + metadata ────────────────────────────────────────────────
+    const cats=[...new Set(acts.map(a=>a.category))];
     const NF=4,NPY=3;
-    const EC=(r,c)=>XLSX.utils.encode_cell({r,c});
-    const ECC=(r,c)=>`${XLSX.utils.encode_col(c)}${r+1}`;
-    // setC: write one cell; f=formula string (optional)
-    const setC=(ws,r,c,v,s,fmt,f)=>{
-      const a=EC(r,c);
-      if(f){ws[a]={t:'n',v:v||0,f,s:s||{}};}
-      else if(typeof v==='number'){ws[a]={t:'n',v,s:s||{}};}
-      else if(v===null||v===undefined||v===''){ws[a]={t:'z',v:'',s:s||{}};}
-      else{ws[a]={t:'s',v:String(v),s:s||{}};}
-      if(fmt&&ws[a])ws[a].z=fmt;
-    };
-    const fillRow=(ws,r,cols,s)=>{for(let c=0;c<cols;c++){const a=EC(r,c);if(!ws[a])ws[a]={t:'z',v:'',s:s||{}};}};
-
-    // ════════════════════════════════════════════════════════════════════════════
-    // buildBudgetSheet — reused for "Budget vs Actuals" and "DD View"
-    // ════════════════════════════════════════════════════════════════════════════
-    const buildBudgetSheet=(sheetActs,sheetTitle)=>{
-      const TC=NF+years.length*NPY+3;
-      const ptCol=NF+years.length*NPY; // Programme Total start col
-      const cats=[...new Set(sheetActs.map(a=>a.category))];
-      const ws={};
-      const rows=[];
-      let ri=0;
-
-      // Row 0 — Title
-      setC(ws,ri,0,sheetTitle,sTitle);
-      fillRow(ws,ri,TC,sTitle);
-      rows.push({hpx:28}); ri++;
-
-      // Row 1 — Date
-      setC(ws,ri,0,`Generated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}`,sDate);
-      fillRow(ws,ri,TC,sDate);
-      rows.push({hpx:16}); ri++;
-
-      // Row 2 — empty
-      fillRow(ws,ri,TC,{});
-      rows.push({hpx:6}); ri++;
-
-      // Row 3 — Header row 1: year group spans
-      const merges=[];
-      setC(ws,ri,0,'Activity',{...sHdr,alignment:ma('left')});
-      setC(ws,ri,1,'Status',sHdr);
-      setC(ws,ri,2,'Active',sHdr);
-      setC(ws,ri,3,'DD',sHdr);
-      merges.push({s:{r:ri,c:0},e:{r:ri+1,c:0}});
-      merges.push({s:{r:ri,c:1},e:{r:ri+1,c:1}});
-      merges.push({s:{r:ri,c:2},e:{r:ri+1,c:2}});
-      merges.push({s:{r:ri,c:3},e:{r:ri+1,c:3}});
-      years.forEach((y,yi)=>{
-        const col=NF+yi*NPY;
-        const bg=yi%2===0?CN:CP;
-        setC(ws,ri,col,`FY${y}`,{...sHdr,fill:mf(bg)});
-        for(let k=1;k<NPY;k++) setC(ws,ri,col+k,'',{...sHdr,fill:mf(bg)});
-        merges.push({s:{r:ri,c:col},e:{r:ri,c:col+NPY-1}});
+    const TC=NF+years.length*NPY+3;
+    const hdr=['Activity','Status','Active?','DD?',
+      ...years.flatMap(y=>[`FY${y} Budget`,`FY${y} Actual`,`FY${y} Var`]),
+      'Programme Budget','Programme Actual','Programme Var'];
+    const dataRows=[],rowMeta=[];
+    const push=(row,meta)=>{dataRows.push(row);rowMeta.push(meta);};
+    push(['Ariadne Bio Inc. — Programme Budget Tracker'],'title');
+    push([`Generated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}`],'date');
+    push([],'empty');
+    push(hdr,'hdr');
+    cats.forEach(cat=>{
+      push([cat],{t:'cat',cat});
+      acts.filter(a=>a.category===cat).forEach(a=>{
+        const row=[a.name,a.commitmentStatus,a.activeInBudget?'Y':'N',a.includeDD?'Y':'N'];
+        years.forEach(y=>{const b=yBgt(a.years[y]),ac=yAct(a.years[y]);row.push(b,ac,b-ac);});
+        const tb=sum(years.map(y=>yBgt(a.years[y]))),ta=sum(years.map(y=>yAct(a.years[y])));
+        row.push(tb,ta,tb-ta);
+        push(row,'act');
       });
-      setC(ws,ri,ptCol,'Programme Total',{...sHdr,fill:mf(CP)});
-      setC(ws,ri,ptCol+1,'',{...sHdr,fill:mf(CP)});
-      setC(ws,ri,ptCol+2,'',{...sHdr,fill:mf(CP)});
-      merges.push({s:{r:ri,c:ptCol},e:{r:ri,c:ptCol+2}});
-      rows.push({hpx:22}); ri++;
-
-      // Row 4 — Header row 2: Budget / Actual / Variance sub-headers
-      setC(ws,ri,0,'',{...sHdr,alignment:ma('left')});
-      setC(ws,ri,1,'',sHdr); setC(ws,ri,2,'',sHdr); setC(ws,ri,3,'',sHdr);
-      years.forEach((y,yi)=>{
-        const col=NF+yi*NPY;
-        const bg=yi%2===0?CN:CP;
-        setC(ws,ri,col,'Budget',{...sHdr,fill:mf(bg),font:mn('93C5FD',true,9)});
-        setC(ws,ri,col+1,'Actual',{...sHdr,fill:mf(bg),font:mn('86EFAC',true,9)});
-        setC(ws,ri,col+2,'Variance',{...sHdr,fill:mf(bg),font:mn('CBD5E1',true,9)});
-      });
-      setC(ws,ri,ptCol,'Budget',{...sHdr,fill:mf(CP),font:mn('93C5FD',true,9)});
-      setC(ws,ri,ptCol+1,'Actual',{...sHdr,fill:mf(CP),font:mn('86EFAC',true,9)});
-      setC(ws,ri,ptCol+2,'Variance',{...sHdr,fill:mf(CP),font:mn('CBD5E1',true,9)});
-      const freezeRow=ri+1;
-      rows.push({hpx:18}); ri++;
-
-      // ── Data rows ──
-      const catTotRows=[]; // row indices of category total rows (for grand total SUM formulas)
-      cats.forEach(cat=>{
-        const ch=CAT_HEX[cat]||CN;
-        const cS={fill:mf(ch),font:mn(CW,true,11),alignment:ma('left'),border:mb(ch)};
-        setC(ws,ri,0,cat,cS);
-        for(let c=1;c<TC;c++) setC(ws,ri,c,'',{fill:mf(ch),border:mb(ch)});
-        rows.push({hpx:20}); ri++;
-
-        const actStart=ri; // first activity row (0-based) for SUM range
-        sheetActs.filter(a=>a.category===cat).forEach(a=>{
-          setC(ws,ri,0,a.name,sAct2);
-          setC(ws,ri,1,a.commitmentStatus,sStat);
-          setC(ws,ri,2,a.activeInBudget?'Y':'N',{...sStat,alignment:ma('center')});
-          setC(ws,ri,3,a.includeDD?'Y':'N',{...sStat,alignment:ma('center')});
-          years.forEach((y,yi)=>{
-            const col=NF+yi*NPY;
-            const yd=a.years[y]||{q1b:0,q1a:0,q2b:0,q2a:0,q3b:0,q3a:0,q4b:0,q4a:0};
-            const b=yBgt(yd),ac=yAct(yd);
-            setC(ws,ri,col,b,sBgt,'#,##0');
-            setC(ws,ri,col+1,ac,sAct,'#,##0');
-            setC(ws,ri,col+2,b-ac,varStyle(b-ac),'#,##0',`=${ECC(ri,col)}-${ECC(ri,col+1)}`);
-          });
-          // Programme Total columns — formulas summing all year budgets/actuals
-          const tb=sum(years.map(y=>yBgt(a.years[y]||{})));
-          const ta=sum(years.map(y=>yAct(a.years[y]||{})));
-          const bF=years.map((_,yi)=>ECC(ri,NF+yi*NPY)).join('+');
-          const aF=years.map((_,yi)=>ECC(ri,NF+yi*NPY+1)).join('+');
-          setC(ws,ri,ptCol,tb,sTB,'#,##0',`=${bF}`);
-          setC(ws,ri,ptCol+1,ta,sTA,'#,##0',`=${aF}`);
-          setC(ws,ri,ptCol+2,tb-ta,varStyle(tb-ta),'#,##0',`=${ECC(ri,ptCol)}-${ECC(ri,ptCol+1)}`);
-          rows.push({hpx:18}); ri++;
-        });
-        const actEnd=ri-1; // last activity row (0-based)
-
-        // Category total row — SUM formulas over activity rows
-        const cTL={fill:mf(CPALE),font:mn(CN,true,10),alignment:ma('left'),border:mb('C7D2FE')};
-        const cTR={fill:mf(CPALE),font:mn(CN,true,10),alignment:ma('right'),border:mb('C7D2FE')};
-        const cTE={fill:mf(CPALE),border:mb('C7D2FE')};
-        setC(ws,ri,0,`Total — ${cat}`,cTL);
-        for(let c=1;c<NF;c++) setC(ws,ri,c,'',cTE);
-        years.forEach((y,yi)=>{
-          const col=NF+yi*NPY;
-          const bR=`${XLSX.utils.encode_col(col)}${actStart+1}:${XLSX.utils.encode_col(col)}${actEnd+1}`;
-          const aR=`${XLSX.utils.encode_col(col+1)}${actStart+1}:${XLSX.utils.encode_col(col+1)}${actEnd+1}`;
-          const sb=sum(sheetActs.filter(a=>a.category===cat).map(a=>yBgt(a.years[y]||{})));
-          const sa=sum(sheetActs.filter(a=>a.category===cat).map(a=>yAct(a.years[y]||{})));
-          setC(ws,ri,col,sb,sTB,'#,##0',`=SUM(${bR})`);
-          setC(ws,ri,col+1,sa,sTA,'#,##0',`=SUM(${aR})`);
-          setC(ws,ri,col+2,sb-sa,varStyle(sb-sa,true),'#,##0',`=${ECC(ri,col)}-${ECC(ri,col+1)}`);
-        });
-        const ctb=sum(sheetActs.filter(a=>a.category===cat).map(a=>sum(years.map(y=>yBgt(a.years[y]||{})))));
-        const cta=sum(sheetActs.filter(a=>a.category===cat).map(a=>sum(years.map(y=>yAct(a.years[y]||{})))));
-        const tbR=`${XLSX.utils.encode_col(ptCol)}${actStart+1}:${XLSX.utils.encode_col(ptCol)}${actEnd+1}`;
-        const taR=`${XLSX.utils.encode_col(ptCol+1)}${actStart+1}:${XLSX.utils.encode_col(ptCol+1)}${actEnd+1}`;
-        setC(ws,ri,ptCol,ctb,sTB,'#,##0',`=SUM(${tbR})`);
-        setC(ws,ri,ptCol+1,cta,sTA,'#,##0',`=SUM(${taR})`);
-        setC(ws,ri,ptCol+2,ctb-cta,varStyle(ctb-cta,true),'#,##0',`=${ECC(ri,ptCol)}-${ECC(ri,ptCol+1)}`);
-        catTotRows.push(ri);
-        rows.push({hpx:20}); ri++;
-
-        // Empty separator
-        fillRow(ws,ri,TC,{});
-        rows.push({hpx:8}); ri++;
-      });
-
-      // Grand total row — sums of category total rows
-      setC(ws,ri,0,'TOTAL PROGRAMME',sGrandL);
-      for(let c=1;c<NF;c++) setC(ws,ri,c,'',sGrand);
-      years.forEach((y,yi)=>{
-        const col=NF+yi*NPY;
-        const gb=sum(sheetActs.map(a=>yBgt(a.years[y]||{})));
-        const ga=sum(sheetActs.map(a=>yAct(a.years[y]||{})));
-        const bF=catTotRows.length?`=${catTotRows.map(r=>ECC(r,col)).join('+')}`:undefined;
-        const aF=catTotRows.length?`=${catTotRows.map(r=>ECC(r,col+1)).join('+')}`:undefined;
-        setC(ws,ri,col,gb,sGrand,'#,##0',bF);
-        setC(ws,ri,col+1,ga,sGrand,'#,##0',aF);
-        const vStyle={...sGrand,font:mn(gb-ga>=0?'86EFAC':'FCA5A5',true,11)};
-        setC(ws,ri,col+2,gb-ga,vStyle,'#,##0',`=${ECC(ri,col)}-${ECC(ri,col+1)}`);
-      });
-      const gtb=sum(sheetActs.map(a=>sum(years.map(y=>yBgt(a.years[y]||{})))));
-      const gta=sum(sheetActs.map(a=>sum(years.map(y=>yAct(a.years[y]||{})))));
-      const tbF=catTotRows.length?`=${catTotRows.map(r=>ECC(r,ptCol)).join('+')}`:undefined;
-      const taF=catTotRows.length?`=${catTotRows.map(r=>ECC(r,ptCol+1)).join('+')}`:undefined;
-      setC(ws,ri,ptCol,gtb,sGrand,'#,##0',tbF);
-      setC(ws,ri,ptCol+1,gta,sGrand,'#,##0',taF);
-      const gvS={...sGrand,font:mn(gtb-gta>=0?'86EFAC':'FCA5A5',true,11)};
-      setC(ws,ri,ptCol+2,gtb-gta,gvS,'#,##0',`=${ECC(ri,ptCol)}-${ECC(ri,ptCol+1)}`);
-      rows.push({hpx:28});
-
-      ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:ri,c:TC-1}});
-      ws['!rows']=rows;
-      ws['!cols']=[{wch:42},{wch:22},{wch:8},{wch:6},
-        ...years.flatMap(()=>[{wch:14},{wch:14},{wch:13}]),
-        {wch:16},{wch:16},{wch:14}];
-      ws['!freeze']={xSplit:NF,ySplit:freezeRow};
-      ws['!merges']=merges;
-      return ws;
-    };
-
-    // ════════════════════════════════════════════════════════════════════════════
-    // buildTimelineSheet — quarterly Gantt grid
-    // ════════════════════════════════════════════════════════════════════════════
-    const buildTimelineSheet=()=>{
-      const ws={};
-      const rows=[];
-      let ri=0;
-      const FC=3; // fixed cols: Activity, Status, Type
-      const TC=FC+years.length*4; // 4 quarters per year
-      const EC2=(r,c)=>XLSX.utils.encode_cell({r,c});
-      const setT=(r,c,v,s,fmt)=>{
-        const a=EC2(r,c);
-        if(typeof v==='number'){ws[a]={t:'n',v,s:s||{},z:fmt||'#,##0'};}
-        else if(!v&&v!==0){ws[a]={t:'z',v:'',s:s||{}};}
-        else{ws[a]={t:'s',v:String(v),s:s||{}};}
-      };
-      const fillT=(r,cols,s)=>{for(let c=0;c<cols;c++){const a=EC2(r,c);if(!ws[a])ws[a]={t:'z',v:'',s:s||{}};}};
-
-      // Title + date
-      setT(ri,0,'Ariadne Bio Inc. — Programme Timeline',sTitle);
-      fillT(ri,TC,sTitle); rows.push({hpx:28}); ri++;
-      setT(ri,0,`Generated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}`,sDate);
-      fillT(ri,TC,sDate); rows.push({hpx:16}); ri++;
-      fillT(ri,TC,{}); rows.push({hpx:6}); ri++;
-
-      // Header row 1 — year group labels
-      const merges=[];
-      setT(ri,0,'Activity',{...sHdr,alignment:ma('left')});
-      setT(ri,1,'Status',sHdr);
-      setT(ri,2,'Commitment',sHdr);
-      merges.push({s:{r:ri,c:0},e:{r:ri+1,c:0}});
-      merges.push({s:{r:ri,c:1},e:{r:ri+1,c:1}});
-      merges.push({s:{r:ri,c:2},e:{r:ri+1,c:2}});
-      years.forEach((y,yi)=>{
-        const col=FC+yi*4;
-        const bg=yi%2===0?CN:CP;
-        setT(ri,col,`FY${y}`,{...sHdr,fill:mf(bg)});
-        for(let k=1;k<4;k++) setT(ri,col+k,'',{...sHdr,fill:mf(bg)});
-        merges.push({s:{r:ri,c:col},e:{r:ri,c:col+3}});
-      });
-      rows.push({hpx:22}); ri++;
-
-      // Header row 2 — Q1-Q4 per year
-      setT(ri,0,'',sHdr); setT(ri,1,'',sHdr); setT(ri,2,'',sHdr);
-      years.forEach((y,yi)=>{
-        const bg=yi%2===0?CN:CP;
-        ['Q1','Q2','Q3','Q4'].forEach((q,qi)=>{
-          setT(ri,FC+yi*4+qi,q,{...sHdr,fill:mf(bg),font:mn(CW,true,9)});
-        });
-      });
-      rows.push({hpx:18}); ri++;
-
-      // Legend row
-      setT(ri,0,'Legend:',{fill:mf('F8FAFC'),font:mn('374151',false,8),alignment:ma('left')});
-      setT(ri,1,'■ Blue = Budget planned',{fill:mf('DBEAFE'),font:mn('1E40AF',false,8),alignment:ma('left')});
-      setT(ri,2,'■ Green = Actuals entered',{fill:mf('D1FAE5'),font:mn('065F46',false,8),alignment:ma('left')});
-      for(let c=3;c<TC;c++) setT(ri,c,'',{fill:mf('F8FAFC')});
-      rows.push({hpx:14}); ri++;
-
-      // ── Data rows ──
-      const cats=[...new Set(acts.map(a=>a.category))];
-      cats.forEach(cat=>{
-        const ch=CAT_HEX[cat]||CN;
-        const cS={fill:mf(ch),font:mn(CW,true,10),alignment:ma('left'),border:mb(ch)};
-        setT(ri,0,cat,cS); fillT(ri,TC,{fill:mf(ch),border:mb(ch)});
-        rows.push({hpx:20}); ri++;
-
-        acts.filter(a=>a.category===cat).forEach(act=>{
-          setT(ri,0,act.name,sAct2);
-          setT(ri,1,act.commitmentStatus,sStat);
-          setT(ri,2,act.activeInBudget?'Active':'Inactive',{...sStat,font:mn(act.activeInBudget?'059669':'9CA3AF',false,8)});
-          years.forEach((y,yi)=>{
-            const yd=act.years[y]||{};
-            ['q1','q2','q3','q4'].forEach((q,qi)=>{
-              const bv=yd[q+'b']||0,av=yd[q+'a']||0;
-              const col=FC+yi*4+qi;
-              if(bv>0||av>0){
-                const hasAct=av>0;
-                const aS={
-                  fill:mf(hasAct?'D1FAE5':bv>0?'DBEAFE':'FAFAFA'),
-                  font:mn(hasAct?'065F46':bv>0?'1E3A5F':'9CA3AF',hasAct,9),
-                  alignment:ma('right'),
-                  border:mb(hasAct?'6EE7B7':bv>0?'BFDBFE':'E5E7EB')
-                };
-                const a=EC2(ri,col);
-                ws[a]={t:'n',v:hasAct?av:bv,z:'#,##0',s:aS};
-              } else {
-                setT(ri,col,'',{fill:mf('FAFAFA'),border:mb('F3F4F6')});
-              }
-            });
-          });
-          rows.push({hpx:18}); ri++;
-        });
-
-        // Category subtotal row
-        const subS={fill:mf(CPALE),font:mn(CN,true,9),alignment:ma('right'),border:mb('C7D2FE')};
-        setT(ri,0,`Total — ${cat}`,{...subS,alignment:ma('left')});
-        setT(ri,1,'',subS); setT(ri,2,'',subS);
-        years.forEach((y,yi)=>{
-          ['q1','q2','q3','q4'].forEach((q,qi)=>{
-            const col=FC+yi*4+qi;
-            const tot=sum(acts.filter(a=>a.category===cat).map(a=>(a.years[y]||{})[q+'b']||0));
-            const a=EC2(ri,col);
-            ws[a]={t:'n',v:tot,z:'#,##0',s:{...subS,fill:mf(CPALE)}};
-          });
-        });
-        rows.push({hpx:18}); ri++;
-        fillT(ri,TC,{}); rows.push({hpx:6}); ri++;
-      });
-
-      // Grand total
-      setT(ri,0,'TOTAL PROGRAMME',sGrandL);
-      setT(ri,1,'',sGrand); setT(ri,2,'',sGrand);
-      years.forEach((y,yi)=>{
-        ['q1','q2','q3','q4'].forEach((q,qi)=>{
-          const col=FC+yi*4+qi;
-          const tot=sum(acts.map(a=>(a.years[y]||{})[q+'b']||0));
-          const a=EC2(ri,col);
-          ws[a]={t:'n',v:tot,z:'#,##0',s:sGrand};
-        });
-      });
-      rows.push({hpx:26});
-
-      ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:ri,c:TC-1}});
-      ws['!rows']=rows;
-      ws['!cols']=[{wch:42},{wch:20},{wch:14},...years.flatMap(()=>Array(4).fill({wch:12}))];
-      ws['!freeze']={xSplit:FC,ySplit:6};
-      ws['!merges']=merges;
-      return ws;
-    };
-
-    // ── Assemble workbook ────────────────────────────────────────────────────────
-    XLSX.utils.book_append_sheet(wb,buildBudgetSheet(acts,'Ariadne Bio Inc. — Programme Budget Tracker'),'Budget vs Actuals');
-    XLSX.utils.book_append_sheet(wb,buildBudgetSheet(acts.filter(a=>a.includeDD),'Ariadne Bio Inc. — DD View'),'DD View');
-    XLSX.utils.book_append_sheet(wb,buildTimelineSheet(),'Timeline');
+      const ca=acts.filter(a=>a.category===cat);
+      const cr=['TOTAL '+cat.toUpperCase(),'','',''];
+      years.forEach(y=>{const b=sum(ca.map(a=>yBgt(a.years[y]))),ac=sum(ca.map(a=>yAct(a.years[y])));cr.push(b,ac,b-ac);});
+      const ctb=sum(ca.map(a=>sum(years.map(y=>yBgt(a.years[y]))))),cta=sum(ca.map(a=>sum(years.map(y=>yAct(a.years[y])))));
+      cr.push(ctb,cta,ctb-cta);
+      push(cr,{t:'ctot',cat});
+      push([],'empty');
+    });
+    const gr=['TOTAL PROGRAMME','','',''];
+    years.forEach(y=>{const b=sum(acts.map(a=>yBgt(a.years[y]))),ac=sum(acts.map(a=>yAct(a.years[y])));gr.push(b,ac,b-ac);});
+    const gtb=sum(acts.map(a=>sum(years.map(y=>yBgt(a.years[y]))))),gta=sum(acts.map(a=>sum(years.map(y=>yAct(a.years[y])))));
+    gr.push(gtb,gta,gtb-gta);
+    push(gr,'grand');
+    // ── Create sheet & apply styles ──────────────────────────────────────────
+    const ws=XLSX.utils.aoa_to_sheet(dataRows);
+    ws['!cols']=[{wch:42},{wch:22},{wch:8},{wch:6},
+      ...years.flatMap(()=>[{wch:14},{wch:14},{wch:12}]),
+      {wch:16},{wch:16},{wch:14}];
+    ws['!rows']=[];
+    const enc=(r,c)=>XLSX.utils.encode_cell({r,c});
+    const ensure=(r,c)=>{const a=enc(r,c);if(!ws[a])ws[a]={t:'z',v:''};return a;};
+    const styleRow=(ri,fn)=>{for(let c=0;c<TC;c++){const a=ensure(ri,c);ws[a].s=typeof fn==='function'?fn(c):fn;}};
+    rowMeta.forEach((meta,ri)=>{
+      if(meta==='title'){styleRow(ri,sTitle);ws['!rows'][ri]={hpx:28};}
+      else if(meta==='date'){styleRow(ri,sDate);}
+      else if(meta==='hdr'){styleRow(ri,sHdr);ws['!rows'][ri]={hpx:36};}
+      else if(meta==='empty'){}
+      else if(typeof meta==='object'&&meta.t==='cat'){
+        const ch=CAT_HEX[meta.cat]||CN;
+        styleRow(ri,{fill:mf(ch),font:mn(CW,true,11),alignment:ma('left'),border:mb(ch)});
+        ws['!rows'][ri]={hpx:22};
+      }
+      else if(meta==='act'){
+        for(let c=0;c<TC;c++){
+          const a=ensure(ri,c);
+          const isTotal=c>=NF+years.length*NPY;
+          if(c===0)ws[a].s=sAct2;
+          else if(c===1)ws[a].s=sStat;
+          else if(c<NF)ws[a].s={...sStat,alignment:ma('center')};
+          else if(isTotal){
+            const off=c-NF-years.length*NPY;
+            if(off===0)ws[a].s=sTB;
+            else if(off===1)ws[a].s=sTA;
+            else ws[a].s=varStyle(ws[a].v||0);
+          } else {
+            const col=(c-NF)%NPY;
+            if(col===0)ws[a].s=sBgt;
+            else if(col===1)ws[a].s=sAct;
+            else ws[a].s=varStyle(ws[a].v||0);
+          }
+          if(c>=NF&&ws[a].t==='n')ws[a].z='#,##0';
+        }
+      }
+      else if(typeof meta==='object'&&meta.t==='ctot'){
+        for(let c=0;c<TC;c++){
+          const a=ensure(ri,c);
+          const isTotal=c>=NF+years.length*NPY;
+          if(c===0)ws[a].s={fill:mf(CPALE),font:mn(CN,true,10),alignment:ma('left'),border:mb('C7D2FE')};
+          else if(c<NF)ws[a].s={fill:mf(CPALE),font:mn(CN,false,10),border:mb('C7D2FE')};
+          else if(isTotal){
+            const off=c-NF-years.length*NPY;
+            if(off===0)ws[a].s={...sTB};
+            else if(off===1)ws[a].s={...sTA};
+            else ws[a].s=varStyle(ws[a].v||0,true);
+          } else {
+            const col=(c-NF)%NPY;
+            if(col===0)ws[a].s={...sTB};
+            else if(col===1)ws[a].s={...sTA};
+            else ws[a].s=varStyle(ws[a].v||0,true);
+          }
+          if(c>=NF&&ws[a].t==='n')ws[a].z='#,##0';
+        }
+        ws['!rows'][ri]={hpx:20};
+      }
+      else if(meta==='grand'){
+        styleRow(ri,(c)=>c===0?sGrandL:sGrand);
+        // Apply number format to grand row
+        for(let c=NF;c<TC;c++){const a=enc(ri,c);if(ws[a]&&ws[a].t==='n')ws[a].z='#,##0';}
+        ws['!rows'][ri]={hpx:26};
+      }
+    });
+    // Apply number format pass for any missed cells
+    const rng=XLSX.utils.decode_range(ws['!ref']);
+    for(let r=rng.s.r;r<=rng.e.r;r++)for(let c=NF;c<TC;c++){const a=enc(r,c);if(ws[a]&&ws[a].t==='n'&&!ws[a].z)ws[a].z='#,##0';}
+    // Freeze panes
+    ws['!freeze']={xSplit:4,ySplit:4};
+    // ── Contributions sheet ──────────────────────────────────────────────────
     if(contributions.length>0){
       const cd=[];
       cd.push(['Ariadne Bio — Contributions & Cash Funding']);
@@ -3684,6 +3539,7 @@ function App(){
       [0,1,2,3,4].forEach(c=>{const a=cen(cd.length-1,c);cws[a].s=c===2?sGrand:sGrandL;if(c===2&&cws[a].t==='n')cws[a].z='#,##0';});
       XLSX.utils.book_append_sheet(wb,cws,'Contributions');
     }
+    XLSX.utils.book_append_sheet(wb,ws,'Budget vs Actuals');
     XLSX.writeFile(wb,`ariadne-budget-${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
