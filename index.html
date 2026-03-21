@@ -1836,7 +1836,7 @@ function enableColResize(t){
   });
 }
 
-function Dashboard({acts,years,catNames}){
+function Dashboard({acts,years,catNames,catColors}){
   const[hiddenDashYears,setHiddenDashYears]=React.useState([]);
   const[chartType,setChartType]=React.useState('bar');
   const[pieMetric,setPieMetric]=React.useState('budget');
@@ -1851,6 +1851,7 @@ function Dashboard({acts,years,catNames}){
   const active=acts.filter(a=>a.activeInBudget);
   const allCats=[...new Set(acts.map(a=>a.category))];
   const dispCat=c=>(catNames&&catNames[c])||c;
+  const cc=c=>(catColors&&catColors[c])||CAT_COLORS[c]||NAVY;
 
   const aB=a=>sum(visYears.map(y=>effBgt(a,y)));
   const aA=a=>sum(visYears.map(y=>yAct(a.years[y])));
@@ -2634,7 +2635,7 @@ function CashFlowPanel({acts,years,visYears,contributions,openingBalance,opening
 }
 
 /* ══ PROGRAMME TOTAL ══ */
-function ProgrammeTotal({acts,years,catNames,catOrder}){
+function ProgrammeTotal({acts,years,catNames,catOrder,catColors}){
   const[hiddenPTYears,setHiddenPTYears]=React.useState([]);
   const visYears=years.filter(y=>!hiddenPTYears.includes(y));
   const togglePTYear=y=>setHiddenPTYears(h=>h.includes(y)?h.filter(x=>x!==y):[...h,y]);
@@ -2642,6 +2643,7 @@ function ProgrammeTotal({acts,years,catNames,catOrder}){
   const allCatKeys=[...new Set(acts.map(a=>a.category))];
   const cats=catOrder?catOrder.filter(c=>allCatKeys.includes(c)):[...allCatKeys];
   const dispCat=c=>(catNames&&catNames[c])||c;
+  const cc=cat=>(catColors&&catColors[cat])||CAT_COLORS[cat]||NAVY;
   const allB=a=>sum(visYears.map(y=>effBgt(a,y)));
   const allA=a=>sum(visYears.map(y=>yAct(a.years[y])));
   return(
@@ -2743,12 +2745,14 @@ function ProgrammeTotal({acts,years,catNames,catOrder}){
 }
 
 /* ══ TIMELINE / GANTT ══ */
-function TimelineTab({acts,years}){
+function TimelineTab({acts,years,catNames,catColors}){
   const QW=84,YW=120,LW=268,RH=34,CH=54;
   const[hideQtrs,setHideQtrs]=React.useState(false);
   const[hiddenTlYears,setHiddenTlYears]=React.useState([]);
   const toggleTlYear=yr=>setHiddenTlYears(prev=>prev.includes(yr)?prev.filter(y=>y!==yr):[...prev,yr]);
   const visYears=years.filter(yr=>!hiddenTlYears.includes(yr));
+  const dispCat=c=>(catNames&&catNames[c])||c;
+  const cc=c=>(catColors&&catColors[c])||CAT_COLORS[c]||NAVY;
   const CW=hideQtrs?YW:QW;
   const nCols=hideQtrs?visYears.length:visYears.length*4;
   const svgW=LW+nCols*CW;
@@ -2873,7 +2877,7 @@ function TimelineTab({acts,years}){
                     <rect x={0} y={rowY} width={svgW} height={RH} fill={catColor+'18'}/>
                     <rect x={0} y={rowY} width={4} height={RH} fill={catColor}/>
                     <text x={12} y={rowY+RH*0.66} fontSize={9} fontWeight="800" fill={catColor}>
-                      {row.cat.replace(' (R&D)','').replace(' (CMC)','').replace(', Manufacturing & Controls','').toUpperCase()}
+                      {dispCat(row.cat).toUpperCase()}
                     </text>
                     <line x1={0} y1={rowY+RH-1} x2={svgW} y2={rowY+RH-1} stroke={catColor+'33'} strokeWidth={1}/>
                   </g>
@@ -2962,6 +2966,7 @@ function App(){
   const[modal,setModal]=useState(null);
   const[ddOnly,setDdOnly]=useState(false);
   const[compact,setCompact]=useState(false);
+  const[exportBudOnly,setExportBudOnly]=useState(false);
   const[showCF,setShowCF]=useState(true);          // show cash flow panel
   const[cfInDD,setCfInDD]=useState(false);          // show cash flow in DD view
   const[defaultAddCat,setDefaultAddCat]=useState(ALL_CATS[0]);
@@ -3411,8 +3416,10 @@ function App(){
     const allDDCats=[...new Set(ddActs.map(a=>a.category))];
     const filtCats=(catOrder||allDDCats).filter(c=>allDDCats.includes(c));
     // ── Generic sheet builder (isQtr=false→yearly, isQtr=true→quarterly) ─────
-    const buildSheet=(isQtr)=>{
-      const FX=4,PY=isQtr?11:3,PT=3,TC=FX+visYrs.length*PY+PT;
+    const buildSheet=(isQtr,budOnly=false)=>{
+      const PY=isQtr?(budOnly?5:11):(budOnly?1:3);
+      const PT=budOnly?1:3;
+      const FX=4,TC=FX+visYrs.length*PY+PT;
       const HDRS=isQtr?2:1;
       const plan=[];
       plan.push({t:'title'});plan.push({t:'date'});plan.push({t:'empty'});
@@ -3437,15 +3444,15 @@ function App(){
         if(p.t==='title')return[`Ariadne Bio — ${isQtr?'Quarterly Detail':'Yearly Summary'} — DD View`];
         if(p.t==='date')return[`${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})} · Years: ${visYrs.map(y=>'FY'+y).join(', ')} · ${ddActs.length} DD activities`];
         if(p.t==='empty')return[];
-        if(p.t==='hdr')return['Activity','Status','Active?','DD?',...visYrs.flatMap(y=>[`FY${y} Budget`,`FY${y} Actual`,`FY${y} Var`]),'Prog Budget','Prog Actual','Prog Var'];
-        if(p.t==='hdr1')return['Activity','Status','Active?','DD?',...visYrs.flatMap(y=>[`FY${y}`,...Array(PY-1).fill('')]),'Programme','',''];
-        if(p.t==='hdr2')return['','','','',...visYrs.flatMap(()=>['Q1 Bgt','Q1 Act','Q2 Bgt','Q2 Act','Q3 Bgt','Q3 Act','Q4 Bgt','Q4 Act','FY Bgt','FY Act','FY Var']),'Total Bgt','Total Act','Total Var'];
-        if(p.t==='cat'){const r=[p.cat];for(let i=1;i<TC;i++)r.push('');return r;}
+        if(p.t==='hdr')return['Activity','Status','Active?','DD?',...visYrs.flatMap(y=>budOnly?[`FY${y} Budget`]:[`FY${y} Budget`,`FY${y} Actual`,`FY${y} Var`]),...(budOnly?['Prog Budget']:['Prog Budget','Prog Actual','Prog Var'])];
+        if(p.t==='hdr1')return['Activity','Status','Active?','DD?',...visYrs.flatMap(y=>[`FY${y}`,...Array(PY-1).fill('')]),...(budOnly?['Programme']:['Programme','',''])];
+        if(p.t==='hdr2')return['','','','',...visYrs.flatMap(()=>budOnly?['Q1 Bgt','Q2 Bgt','Q3 Bgt','Q4 Bgt','FY Bgt']:['Q1 Bgt','Q1 Act','Q2 Bgt','Q2 Act','Q3 Bgt','Q3 Act','Q4 Bgt','Q4 Act','FY Bgt','FY Act','FY Var']),...(budOnly?['Total Bgt']:['Total Bgt','Total Act','Total Var'])];
+        if(p.t==='cat'){const r=[(catNames&&catNames[p.cat])||p.cat];for(let i=1;i<TC;i++)r.push('');return r;}
         if(p.t==='act'){
           const{a}=p;const row=[a.name,a.commitmentStatus,a.activeInBudget?'Y':'N',a.includeDD?'Y':'N'];
-          if(isQtr){visYrs.forEach(y=>{const yd=a.years[y]||{};row.push(yd.q1b||0,yd.q1a||0,yd.q2b||0,yd.q2a||0,yd.q3b||0,yd.q3a||0,yd.q4b||0,yd.q4a||0,0,0,0);});}
-          else{visYrs.forEach(y=>row.push(yBgt(a.years[y]),yAct(a.years[y]),0));}
-          row.push(0,0,0);return row;
+          if(isQtr){visYrs.forEach(y=>{const yd=a.years[y]||{};if(budOnly){row.push(yd.q1b||0,yd.q2b||0,yd.q3b||0,yd.q4b||0,0);}else{row.push(yd.q1b||0,yd.q1a||0,yd.q2b||0,yd.q2a||0,yd.q3b||0,yd.q3a||0,yd.q4b||0,yd.q4a||0,0,0,0);}});}
+          else{visYrs.forEach(y=>row.push(yBgt(a.years[y]),...(budOnly?[]:[yAct(a.years[y]),0])));}
+          row.push(0,...(budOnly?[]:[0,0]));return row;
         }
         if(p.t==='ctot'){const r=['TOTAL '+(catNames&&catNames[p.cat]||p.cat).toUpperCase(),'','',''];for(let i=FX;i<TC;i++)r.push(0);return r;}
         if(p.t==='grand'){const r=['TOTAL PROGRAMME','','',''];for(let i=FX;i<TC;i++)r.push(0);return r;}
@@ -3455,7 +3462,7 @@ function App(){
       ws2['!rows']=[];ws2['!merges']=[];
       if(isQtr){
         visYrs.forEach((_,i)=>ws2['!merges'].push({s:{r:3,c:FX+i*PY},e:{r:3,c:FX+i*PY+PY-1}}));
-        ws2['!merges'].push({s:{r:3,c:FX+visYrs.length*PY},e:{r:3,c:FX+visYrs.length*PY+2}});
+        if(!budOnly)ws2['!merges'].push({s:{r:3,c:FX+visYrs.length*PY},e:{r:3,c:FX+visYrs.length*PY+2}});
       }
       const ens=(r,c)=>{const a=ec(r,c);if(!ws2[a])ws2[a]={t:'z',v:''};return a;};
       const setF=(r,c,f,v,s)=>{const a=ec(r,c);ws2[a]={t:'f',f,v:v||0,z:FMT,s:s||sBgt};};
@@ -3490,25 +3497,35 @@ function App(){
           if(isQtr){
             visYrs.forEach((y,yi)=>{
               const base=FX+yi*PY;const yd=a.years[y]||{};
-              for(let q=0;q<4;q++){setN(ri,base+q*2,yd[`q${q+1}b`]||0,sBgt);setN(ri,base+q*2+1,yd[`q${q+1}a`]||0,sAct);}
-              const fyb=yBgt(a.years[y]),fya=yAct(a.years[y]);
-              setF(ri,base+8,`${ec(ri,base)}+${ec(ri,base+2)}+${ec(ri,base+4)}+${ec(ri,base+6)}`,fyb,sTB);
-              setF(ri,base+9,`${ec(ri,base+1)}+${ec(ri,base+3)}+${ec(ri,base+5)}+${ec(ri,base+7)}`,fya,sTA);
-              setF(ri,base+10,`${ec(ri,base+8)}-${ec(ri,base+9)}`,fyb-fya,vSt(fyb-fya));
+              if(budOnly){
+                setN(ri,base,yd.q1b||0,sBgt);setN(ri,base+1,yd.q2b||0,sBgt);
+                setN(ri,base+2,yd.q3b||0,sBgt);setN(ri,base+3,yd.q4b||0,sBgt);
+                const fyb=yBgt(a.years[y]);
+                setF(ri,base+4,`${ec(ri,base)}+${ec(ri,base+1)}+${ec(ri,base+2)}+${ec(ri,base+3)}`,fyb,sTB);
+              }else{
+                for(let q=0;q<4;q++){setN(ri,base+q*2,yd[`q${q+1}b`]||0,sBgt);setN(ri,base+q*2+1,yd[`q${q+1}a`]||0,sAct);}
+                const fyb=yBgt(a.years[y]),fya=yAct(a.years[y]);
+                setF(ri,base+8,`${ec(ri,base)}+${ec(ri,base+2)}+${ec(ri,base+4)}+${ec(ri,base+6)}`,fyb,sTB);
+                setF(ri,base+9,`${ec(ri,base+1)}+${ec(ri,base+3)}+${ec(ri,base+5)}+${ec(ri,base+7)}`,fya,sTA);
+                setF(ri,base+10,`${ec(ri,base+8)}-${ec(ri,base+9)}`,fyb-fya,vSt(fyb-fya));
+              }
             });
           }else{
             visYrs.forEach((y,yi)=>{
               const base=FX+yi*PY;const b=yBgt(a.years[y]),ac=yAct(a.years[y]);
-              setN(ri,base,b,sBgt);setN(ri,base+1,ac,sAct);
-              setF(ri,base+2,`${ec(ri,base)}-${ec(ri,base+1)}`,b-ac,vSt(b-ac));
+              setN(ri,base,b,sBgt);
+              if(!budOnly){setN(ri,base+1,ac,sAct);setF(ri,base+2,`${ec(ri,base)}-${ec(ri,base+1)}`,b-ac,vSt(b-ac));}
             });
           }
-          const fyBCols=isQtr?visYrs.map((_,yi)=>ec(ri,FX+yi*PY+8)):visYrs.map((_,yi)=>ec(ri,FX+yi*PY));
-          const fyACols=isQtr?visYrs.map((_,yi)=>ec(ri,FX+yi*PY+9)):visYrs.map((_,yi)=>ec(ri,FX+yi*PY+1));
-          const pb=sum(visYrs.map(y=>yBgt(a.years[y]))),pa=sum(visYrs.map(y=>yAct(a.years[y])));
+          const fyBCols=isQtr?visYrs.map((_,yi)=>ec(ri,FX+yi*PY+(budOnly?4:8))):visYrs.map((_,yi)=>ec(ri,FX+yi*PY));
+          const pb=sum(visYrs.map(y=>yBgt(a.years[y])));
           setF(ri,progBase,`SUM(${fyBCols.join(',')})`,pb,sTB);
-          setF(ri,progBase+1,`SUM(${fyACols.join(',')})`,pa,sTA);
-          setF(ri,progBase+2,`${ec(ri,progBase)}-${ec(ri,progBase+1)}`,pb-pa,vSt(pb-pa));
+          if(!budOnly){
+            const fyACols=isQtr?visYrs.map((_,yi)=>ec(ri,FX+yi*PY+9)):visYrs.map((_,yi)=>ec(ri,FX+yi*PY+1));
+            const pa=sum(visYrs.map(y=>yAct(a.years[y])));
+            setF(ri,progBase+1,`SUM(${fyACols.join(',')})`,pa,sTA);
+            setF(ri,progBase+2,`${ec(ri,progBase)}-${ec(ri,progBase+1)}`,pb-pa,vSt(pb-pa));
+          }
         }
         else if(p.t==='ctot'){
           ws2['!rows'][ri]={hpx:22};
@@ -3596,13 +3613,17 @@ function App(){
       return ws2;
     };
     // ── Yearly sheet ──────────────────────────────────────────────────────────
-    const ws=buildSheet(false);
-    ws['!cols']=[{wch:44},{wch:22},{wch:7},{wch:5},...visYrs.flatMap(()=>[{wch:14},{wch:14},{wch:12}]),{wch:16},{wch:16},{wch:14}];
-    XLSX.utils.book_append_sheet(wb,ws,'DD View — Yearly');
+    const ws=buildSheet(false,exportBudOnly);
+    ws['!cols']=exportBudOnly
+      ?[{wch:44},{wch:22},{wch:7},{wch:5},...visYrs.map(()=>({wch:14})),{wch:16}]
+      :[{wch:44},{wch:22},{wch:7},{wch:5},...visYrs.flatMap(()=>[{wch:14},{wch:14},{wch:12}]),{wch:16},{wch:16},{wch:14}];
+    XLSX.utils.book_append_sheet(wb,ws,exportBudOnly?'DD View — Budget Only':'DD View — Yearly');
     // ── Quarterly sheet ───────────────────────────────────────────────────────
-    const qws=buildSheet(true);
-    qws['!cols']=[{wch:44},{wch:22},{wch:7},{wch:5},...visYrs.flatMap(()=>[...Array(8).fill({wch:11}),{wch:13},{wch:13},{wch:12}]),{wch:16},{wch:16},{wch:14}];
-    XLSX.utils.book_append_sheet(wb,qws,'DD View — Quarterly');
+    const qws=buildSheet(true,exportBudOnly);
+    qws['!cols']=exportBudOnly
+      ?[{wch:44},{wch:22},{wch:7},{wch:5},...visYrs.flatMap(()=>[...Array(4).fill({wch:11}),{wch:13}]),{wch:16}]
+      :[{wch:44},{wch:22},{wch:7},{wch:5},...visYrs.flatMap(()=>[...Array(8).fill({wch:11}),{wch:13},{wch:13},{wch:12}]),{wch:16},{wch:16},{wch:14}];
+    XLSX.utils.book_append_sheet(wb,qws,exportBudOnly?'DD View — Budget Only (Qtr)':'DD View — Quarterly');
     // ── Contributions sheet ───────────────────────────────────────────────────
     if(contributions&&contributions.length>0){
       const cd=[];
@@ -3649,7 +3670,13 @@ function App(){
             {canUndo&&<button onClick={undo} title="Undo last action (Ctrl+Z)" className="px-3 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-white text-xs font-bold transition-colors flex items-center gap-1">↩ Undo</button>}
             <label className="flex items-center gap-1.5 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-white text-xs font-bold cursor-pointer transition-colors">↑ Import JSON<input type="file" accept=".json" onChange={importJSON} className="hidden"/></label>
             <button onClick={exportJSON} className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-white text-xs font-bold transition-colors">↓ Export JSON</button>
-            <button onClick={exportExcel} className="px-3 py-2 bg-white rounded-xl text-xs font-black shadow-sm" style={{color:NAVY}}>↓ Excel</button>
+            <div className="flex items-center gap-1.5">
+              <label className="flex items-center gap-1 text-white/60 text-xs cursor-pointer select-none">
+                <input type="checkbox" checked={exportBudOnly} onChange={e=>setExportBudOnly(e.target.checked)}/>
+                <span>Budget only</span>
+              </label>
+              <button onClick={exportExcel} className="px-3 py-2 bg-white rounded-xl text-xs font-black shadow-sm" style={{color:NAVY}}>↓ Excel</button>
+            </div>
           </div>
         </div>
       </header>
@@ -3666,7 +3693,7 @@ function App(){
 
       <main className="w-full px-3 py-5">
 
-        {tab==='dashboard'&&<Dashboard acts={dispActs} years={years} catNames={catNames}/>}
+        {tab==='dashboard'&&<Dashboard acts={dispActs} years={years} catNames={catNames} catColors={catColors}/>}
 
         {tab==='budget'&&(
           <div className="space-y-4">
@@ -3780,11 +3807,11 @@ function App(){
                 <input type="checkbox" checked={ddOnly} onChange={e=>setDdOnly(e.target.checked)} className="w-4 h-4 accent-indigo-600"/> DD View only
               </label>
             </div>
-            <ProgrammeTotal acts={dispActs} years={years} catNames={catNames} catOrder={catOrder}/>
+            <ProgrammeTotal acts={dispActs} years={years} catNames={catNames} catOrder={catOrder} catColors={catColors}/>
           </div>
         )}
 
-        {tab==='timeline'&&<TimelineTab acts={dispActs} years={years}/>}
+        {tab==='timeline'&&<TimelineTab acts={dispActs} years={years} catNames={catNames} catColors={catColors}/>}
 
         {tab==='scenarios'&&<ScenariosPanel
           acts={acts} years={years} scenarios={scenarios}
