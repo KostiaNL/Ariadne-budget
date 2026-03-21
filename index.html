@@ -2643,7 +2643,7 @@ function ProgrammeTotal({acts,years,catNames,catOrder,catColors}){
   const allCatKeys=[...new Set(acts.map(a=>a.category))];
   const cats=catOrder?catOrder.filter(c=>allCatKeys.includes(c)):[...allCatKeys];
   const dispCat=c=>(catNames&&catNames[c])||c;
-  const cc=cat=>(catColors&&catColors[cat])||CAT_COLORS[cat]||NAVY;
+  const cc=c=>(catColors&&catColors[c])||CAT_COLORS[c]||NAVY;
   const allB=a=>sum(visYears.map(y=>effBgt(a,y)));
   const allA=a=>sum(visYears.map(y=>yAct(a.years[y])));
   return(
@@ -2751,8 +2751,6 @@ function TimelineTab({acts,years,catNames,catColors}){
   const[hiddenTlYears,setHiddenTlYears]=React.useState([]);
   const toggleTlYear=yr=>setHiddenTlYears(prev=>prev.includes(yr)?prev.filter(y=>y!==yr):[...prev,yr]);
   const visYears=years.filter(yr=>!hiddenTlYears.includes(yr));
-  const dispCat=c=>(catNames&&catNames[c])||c;
-  const cc=c=>(catColors&&catColors[c])||CAT_COLORS[c]||NAVY;
   const CW=hideQtrs?YW:QW;
   const nCols=hideQtrs?visYears.length:visYears.length*4;
   const svgW=LW+nCols*CW;
@@ -2796,6 +2794,8 @@ function TimelineTab({acts,years,catNames,catColors}){
     return total;
   };
   const cats=[...new Set(acts.map(a=>a.category))];
+  const dispCat=c=>(catNames&&catNames[c])||c;
+  const cc=c=>(catColors&&catColors[c])||CAT_COLORS[c]||NAVY;
   const rows=[];
   cats.forEach(cat=>{
     rows.push({type:'cat',cat});
@@ -2935,6 +2935,745 @@ function TimelineTab({acts,years,catNames,catColors}){
 /* ══════════════════════════════════════════
    MAIN APP
 ══════════════════════════════════════════ */
+
+
+function BudgetPlanTab({acts,years,catNames,catColors,catOrder,planGroups,onSavePlanGroups,planCatOrder,onSavePlanCatOrder,planItemOrder,onSavePlanItemOrder,planExcluded,onSavePlanExcluded}){
+  const{useState:useS}=React;
+  const[hiddenYrs,setHiddenYrs]=useS([]);
+  const[showQtrs,setShowQtrs]=useS(true);
+  const[panelOpen,setPanelOpen]=useS(false);
+  const[editGrp,setEditGrp]=useS(null);
+  const[draftActIds,setDraftActIds]=useS([]);
+  const[draftName,setDraftName]=useS('');
+  const[draftCatLabel,setDraftCatLabel]=useS('');
+
+  const visYrs=years.filter(y=>!hiddenYrs.includes(y));
+  const dispCat=c=>(catNames&&catNames[c])||c;
+  const cc=c=>(catColors&&catColors[c])||CAT_COLORS[c]||NAVY;
+  const uid=()=>Math.random().toString(36).slice(2,10);
+  const fmtN=n=>n===0?'\u2014':new Intl.NumberFormat('en-GB',{minimumFractionDigits:0,maximumFractionDigits:0}).format(n);
+  const qKeys=['q1b','q2b','q3b','q4b'];
+  const yBgt=yd=>qKeys.reduce((s,k)=>s+(yd?.[k]||0),0);
+  const actFYBgt=(a,y)=>yBgt(a.years?.[y]);
+
+  // Exclusion helpers
+  const isExcl=id=>(planExcluded||[]).includes(id);
+  const isCatExcl=pc=>(planExcluded||[]).includes('cat:'+pc);
+  const toggleExcluded=id=>onSavePlanExcluded(prev=>{
+    const p=prev||[];
+    return p.includes(id)?p.filter(x=>x!==id):[...p,id];
+  });
+
+  // Source categories ordered
+  const allActCats=catOrder
+    ?catOrder.filter(c=>acts.some(a=>a.category===c))
+    :[...new Set(acts.map(a=>a.category))];
+  const groupedIds=new Set((planGroups||[]).flatMap(g=>g.actIds));
+
+  // Derive base plan categories
+  const grpCatLabels=[...new Set((planGroups||[]).map(g=>g.catLabel||'Other'))];
+  const ungroupedDispCats=[...new Set(
+    allActCats.filter(c=>acts.some(a=>a.category===c&&!groupedIds.has(a.id))).map(c=>dispCat(c))
+  )];
+  const allPlanCats=[...new Set([...grpCatLabels,...ungroupedDispCats])];
+
+  // Apply planCatOrder: known order first, then any new cats appended
+  const planCats=(()=>{
+    const ord=planCatOrder||[];
+    const known=ord.filter(pc=>allPlanCats.includes(pc));
+    const novel=allPlanCats.filter(pc=>!ord.includes(pc));
+    return [...known,...novel];
+  })();
+
+  // Get ordered items for a plan category
+  const getOrderedItems=pc=>{
+    const pcGrps=(planGroups||[]).filter(g=>(g.catLabel||'Other')===pc);
+    const pcUngrouped=allActCats
+      .filter(c=>dispCat(c)===pc)
+      .flatMap(c=>acts.filter(a=>a.category===c&&!groupedIds.has(a.id)));
+    const allItems=[
+      ...pcGrps.map(g=>({t:'grp',id:g.id,g})),
+      ...pcUngrouped.map(a=>({t:'act',id:a.id,a}))
+    ];
+    const ord=(planItemOrder||{})[pc]||[];
+    const known=ord.map(id=>allItems.find(x=>x.id===id)).filter(Boolean);
+    const novel=allItems.filter(x=>!ord.includes(x.id));
+    return [...known,...novel];
+  };
+
+  // Budget calculations (exclusion-aware)
+  const rowQBgt=(row,y,qi,applyExcl=false)=>{
+    const qk=qKeys[qi];
+    if(row.t==='grp'){
+      if(applyExcl&&isExcl(row.g.id))return 0;
+      return row.g.actIds.reduce((s,id)=>{const a=acts.find(x=>x.id===id);return s+(a?.years?.[y]?.[qk]||0);},0);
+    }
+    if(row.t==='act'){
+      if(applyExcl&&isExcl(row.a.id))return 0;
+      return row.a.years?.[y]?.[qk]||0;
+    }
+    if(row.t==='ctot'){
+      if(applyExcl&&isCatExcl(row.label))return 0;
+      return row.items.reduce((s,it)=>s+rowQBgt(it,y,qi,true),0);
+    }
+    if(row.t==='grand')return buildRows().filter(r=>r.t==='ctot').reduce((s,r)=>s+rowQBgt(r,y,qi,true),0);
+    return 0;
+  };
+  const rowFYBgt=(row,y,applyExcl=false)=>qKeys.reduce((s,_,qi)=>s+rowQBgt(row,y,qi,applyExcl),0);
+  const rowProgBgt=(row,applyExcl=false)=>visYrs.reduce((s,y)=>s+rowFYBgt(row,y,applyExcl),0);
+
+  const buildRows=()=>{
+    const rows=[];
+    planCats.forEach(pc=>{
+      const items=getOrderedItems(pc);
+      if(!items.length)return;
+      const catKey=allActCats.find(c=>dispCat(c)===pc)||pc;
+      rows.push({t:'cat',label:pc,catKey});
+      items.forEach(it=>rows.push(it));
+      rows.push({t:'ctot',label:pc,catKey,items});
+    });
+    rows.push({t:'grand'});
+    return rows;
+  };
+  const rows=buildRows();
+
+  // Category move
+  const moveCat=(pc,dir)=>{
+    const ord=[...planCats];
+    const i=ord.indexOf(pc);if(i<0)return;
+    const j=i+dir;if(j<0||j>=ord.length)return;
+    [ord[i],ord[j]]=[ord[j],ord[i]];
+    onSavePlanCatOrder(ord);
+  };
+
+  // Item move within category
+  const moveItem=(pc,id,dir)=>{
+    const items=getOrderedItems(pc);
+    const ids=items.map(x=>x.id);
+    const i=ids.indexOf(id);if(i<0)return;
+    const j=i+dir;if(j<0||j>=ids.length)return;
+    [ids[i],ids[j]]=[ids[j],ids[i]];
+    onSavePlanItemOrder(prev=>({...prev||{},[pc]:ids}));
+  };
+
+  // Group editor
+  const openNew=()=>{setDraftName('');setDraftCatLabel(planCats[0]||allActCats.map(c=>dispCat(c))[0]||'');setDraftActIds([]);setEditGrp({id:null});setPanelOpen(true);};
+  const openEdit=g=>{setDraftName(g.name);setDraftCatLabel(g.catLabel||'');setDraftActIds([...g.actIds]);setEditGrp(g);setPanelOpen(true);};
+  const saveGrp=()=>{
+    if(!draftName.trim())return;
+    const isNew=!editGrp.id;
+    const n={id:editGrp.id||uid(),name:draftName.trim(),catLabel:draftCatLabel.trim()||'Other',actIds:draftActIds};
+    // Update planGroups
+    const newGroups=isNew?[...(planGroups||[]),n]:(planGroups||[]).map(g=>g.id===n.id?n:g);
+    onSavePlanGroups(newGroups);
+    // Ensure catLabel is in planCatOrder
+    onSavePlanCatOrder(prev=>{
+      const p=prev||[];
+      return p.includes(n.catLabel)?p:[...p,n.catLabel];
+    });
+    // Ensure group ID is in planItemOrder for its cat
+    if(isNew){
+      onSavePlanItemOrder(prev=>{
+        const p=prev||{};const cur=p[n.catLabel]||[];
+        return cur.includes(n.id)?p:{...p,[n.catLabel]:[...cur,n.id]};
+      });
+    }
+    // If catLabel changed on edit, move ID between order lists
+    if(!isNew&&editGrp.catLabel&&editGrp.catLabel!==n.catLabel){
+      onSavePlanItemOrder(prev=>{
+        const p={...prev||{}};
+        p[editGrp.catLabel]=(p[editGrp.catLabel]||[]).filter(x=>x!==n.id);
+        const cur=p[n.catLabel]||[];
+        if(!cur.includes(n.id))p[n.catLabel]=[...cur,n.id];
+        return p;
+      });
+    }
+    setPanelOpen(false);setEditGrp(null);
+  };
+  const deleteGrp=id=>{
+    if(!window.confirm('Remove this group?'))return;
+    onSavePlanGroups((planGroups||[]).filter(g=>g.id!==id));
+    onSavePlanItemOrder(prev=>{
+      const p={...prev||{}};
+      Object.keys(p).forEach(k=>{p[k]=p[k].filter(x=>x!==id);});
+      return p;
+    });
+  };
+  const toggleDraftAct=id=>setDraftActIds(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
+
+  // Btn style helpers
+  const mvBtn=(disabled)=>({
+    background:'none',border:'none',cursor:disabled?'default':'pointer',
+    padding:'1px 4px',borderRadius:4,color:disabled?'#e5e7eb':'#9ca3af',
+    fontSize:10,lineHeight:'12px',display:'block'
+  });
+
+  // Excel export (exclusion-aware)
+  const exportPlanExcel=()=>{
+    if(typeof XLSX==='undefined'){alert('Excel library not loaded');return;}
+    const wb=XLSX.utils.book_new();
+    const CN='1A126E',CW='FFFFFF',CPALE='EEEDF8';
+    const getCH=c=>(catColors&&catColors[c]?catColors[c].replace('#',''):null)||CN;
+    const mf=rgb=>({patternType:'solid',fgColor:{rgb}});
+    const mn=(rgb,bold=false,sz=10)=>({color:{rgb},bold,sz,name:'Calibri'});
+    const ma=(h='left',v='center',wrap=false)=>({horizontal:h,vertical:v,wrapText:wrap});
+    const mb=(c='D1D5DB')=>({top:{style:'thin',color:{rgb:c}},bottom:{style:'thin',color:{rgb:c}},left:{style:'thin',color:{rgb:c}},right:{style:'thin',color:{rgb:c}}});
+    const sTitle={fill:mf(CN),font:mn(CW,true,13),alignment:ma('left')};
+    const sDate={fill:mf(CPALE),font:mn('374151',false,9),alignment:ma('left')};
+    const sHdr={fill:mf(CN),font:mn(CW,true,10),alignment:ma('center','center',true),border:mb('0F0A4B')};
+    const sBgt={fill:mf('EFF6FF'),font:mn('1E3A5F',false,10),alignment:ma('right'),border:mb('DBEAFE')};
+    const sGrp={fill:mf('F5F3FF'),font:mn('5B21B6',false,10),alignment:ma('right'),border:mb('DDD6FE')};
+    const sGrpL={fill:mf('F5F3FF'),font:mn('5B21B6',false,10),alignment:ma('left'),border:mb('DDD6FE')};
+    const sExcl={fill:mf('F9FAFB'),font:{...mn('9CA3AF',false,10),strike:true},alignment:ma('right'),border:mb()};
+    const sExclL={fill:mf('F9FAFB'),font:{...mn('9CA3AF',false,10),strike:true},alignment:ma('left'),border:mb()};
+    const sTot={fill:mf(CPALE),font:mn(CN,true,10),alignment:ma('right'),border:mb('C7D2FE')};
+    const sTotL={fill:mf(CPALE),font:mn(CN,true,10),alignment:ma('left'),border:mb()};
+    const sGrand={fill:mf(CN),font:mn('FCD34D',true,11),alignment:ma('right'),border:mb('0F0A4B')};
+    const sGrandL={fill:mf(CN),font:mn('FCD34D',true,11),alignment:ma('left'),border:mb('0F0A4B')};
+    const sLabel={fill:mf('FFFFFF'),font:mn('374151',false,10),alignment:ma('left','center',true),border:mb('E5E7EB')};
+    const FMT='#,##0';
+    const buildSheet=(isQtr)=>{
+      const PY=isQtr?5:1,FX=1;
+      const TC=FX+visYrs.length*PY+1;
+      const ec=(r,c)=>XLSX.utils.encode_cell({r,c});
+      const ws2={};
+      const planRowsFull=[
+        {t:'title'},{t:'date'},
+        ...(isQtr?[{t:'hdr1'},{t:'hdr2'}]:[{t:'hdr'}]),
+        ...rows.filter(r=>r.t!=='grand'),
+        rows.find(r=>r.t==='grand')
+      ].filter(Boolean);
+      const aoa=planRowsFull.map(p=>{
+        if(p.t==='title')return['Ariadne Bio \u2014 Budget Plan',...Array(TC-1).fill('')];
+        if(p.t==='date')return[`Generated: ${new Date().toLocaleDateString()}${isQtr?' (Quarterly)':' (Yearly)'}`,...Array(TC-1).fill('')];
+        if(p.t==='hdr')return['Activity / Group',...visYrs.map(y=>`FY${y} Budget`),'Prog Budget'];
+        if(p.t==='hdr1')return['Activity / Group',...visYrs.flatMap(y=>[`FY${y}`,...Array(PY-1).fill('')]),'Programme'];
+        if(p.t==='hdr2')return['',...visYrs.flatMap(()=>isQtr?['Q1','Q2','Q3','Q4','FY Bgt']:[]),'Total'];
+        if(p.t==='cat')return[p.label+(isCatExcl(p.label)?' (excluded)':''),...Array(TC-1).fill('')];
+        if(p.t==='grp'||p.t==='act'){
+          const id=p.t==='grp'?p.g.id:p.a.id;
+          const excl=(p.t==='grp'&&isExcl(p.g.id))||(p.t==='act'&&isExcl(p.a.id));
+          const nm=(p.t==='grp'?p.g.name:p.a.name)+(excl?' (excluded)':'');
+          const r=[nm];
+          if(isQtr){visYrs.forEach(y=>{qKeys.forEach((_,qi)=>r.push(rowQBgt(p,y,qi)));r.push(0);});}
+          else{visYrs.forEach(y=>r.push(rowFYBgt(p,y)));}
+          r.push(0);return r;
+        }
+        if(p.t==='ctot'){
+          const r=['TOTAL '+p.label.toUpperCase()+(isCatExcl(p.label)?' (excluded)':'')];
+          if(isQtr){visYrs.forEach(y=>{qKeys.forEach((_,qi)=>r.push(rowQBgt(p,y,qi,true)));r.push(rowFYBgt(p,y,true));});}
+          else{visYrs.forEach(y=>r.push(rowFYBgt(p,y,true)));}
+          r.push(rowProgBgt(p,true));return r;
+        }
+        if(p.t==='grand'){
+          const r=['TOTAL PROGRAMME'];
+          if(isQtr){visYrs.forEach(y=>{qKeys.forEach((_,qi)=>r.push(rowQBgt(p,y,qi)));r.push(rowFYBgt(p,y));});}
+          else{visYrs.forEach(y=>r.push(rowFYBgt(p,y)));}
+          r.push(rowProgBgt(p));return r;
+        }
+        return[];
+      });
+      XLSX.utils.sheet_add_aoa(ws2,aoa,{origin:'A1'});
+      ws2['!rows']=[];ws2['!merges']=[];
+      // Build map: catLabel -> {first, last item row, ctot row}
+      const catRowMap={};
+      planRowsFull.forEach((p,ri)=>{
+        if(p.t==='grp'||p.t==='act'){
+          const lbl=p.t==='grp'?(p.g.catLabel||'Other'):dispCat(p.a.category);
+          if(!catRowMap[lbl])catRowMap[lbl]={first:ri,last:ri,ctot:null};
+          else catRowMap[lbl].last=ri;
+        }
+        if(p.t==='ctot'&&catRowMap[p.label])catRowMap[p.label].ctot=ri;
+      });
+      planRowsFull.forEach((p,ri)=>{
+        const styleAll=s=>{for(let c=0;c<TC;c++){const a=ec(ri,c);if(!ws2[a])ws2[a]={t:'z',v:''};ws2[a].s=s;}};
+        const setN=(c,v,s)=>{const a=ec(ri,c);ws2[a]={t:'n',v,z:FMT,s:s||sBgt};};
+        const setF=(c,f,v,s)=>{const a=ec(ri,c);ws2[a]={t:'f',f,v:v||0,z:FMT,s:s||sBgt};};
+        if(p.t==='title'){styleAll(sTitle);ws2['!rows'][ri]={hpx:28};}
+        else if(p.t==='date'){styleAll(sDate);ws2['!rows'][ri]={hpx:16};}
+        else if(p.t==='hdr'||p.t==='hdr1'||p.t==='hdr2'){styleAll(sHdr);ws2['!rows'][ri]={hpx:28};}
+        else if(p.t==='cat'){
+          const excl=isCatExcl(p.label);
+          const hx=(catColors&&catColors[p.catKey]?catColors[p.catKey].replace('#',''):null)||CN;
+          const sC=excl?{fill:mf('E5E7EB'),font:{...mn('9CA3AF',true,10),strike:true},alignment:ma('left'),border:mb()}
+                       :{fill:mf(hx),font:mn(CW,true,10),alignment:ma('left'),border:mb()};
+          styleAll(sC);ws2[ec(ri,0)].v=p.label+(excl?' (excluded)':'');
+          ws2['!merges'].push({s:{r:ri,c:0},e:{r:ri,c:TC-1}});ws2['!rows'][ri]={hpx:22};
+        }
+        else if(p.t==='grp'||p.t==='act'){
+          const isGrp=p.t==='grp';
+          const excl=(isGrp&&isExcl(p.g.id))||(!isGrp&&isExcl(p.a.id));
+          const bSt=excl?sExcl:isGrp?sGrp:sBgt;
+          const lSt=excl?sExclL:isGrp?sGrpL:sLabel;
+          ws2[ec(ri,0)].s=lSt;
+          const progBase=FX+visYrs.length*PY;
+          if(isQtr){
+            visYrs.forEach((y,yi)=>{
+              const base=FX+yi*PY;
+              qKeys.forEach((_,qi)=>setN(base+qi,rowQBgt(p,y,qi),bSt));
+              setF(base+4,`${ec(ri,base)}+${ec(ri,base+1)}+${ec(ri,base+2)}+${ec(ri,base+3)}`,rowFYBgt(p,y),bSt);
+            });
+          }else{
+            visYrs.forEach((y,yi)=>setN(FX+yi,rowFYBgt(p,y),bSt));
+          }
+          const fyBCols=isQtr?visYrs.map((_,yi)=>ec(ri,FX+yi*PY+4)):visYrs.map((_,yi)=>ec(ri,FX+yi));
+          setF(progBase,`SUM(${fyBCols.join(',')})`,rowProgBgt(p),bSt);
+        }
+        else if(p.t==='ctot'){
+          styleAll(sTot);
+          const excl=isCatExcl(p.label);
+          const totLabel='TOTAL '+p.label.toUpperCase()+(excl?' (excluded)':'');
+          ws2[ec(ri,0)].v=totLabel;ws2[ec(ri,0)].s=excl?{...sTotL,font:{...mn('9CA3AF',true,10),strike:true}}:sTotL;
+          const progBase=FX+visYrs.length*PY;
+          // Build SUM formulas from tracked item rows
+          const{first:fRow,last:lRow}=catRowMap[p.label]||{};
+          if(fRow!=null){
+            if(isQtr){
+              visYrs.forEach((y,yi)=>{
+                const base=FX+yi*PY;
+                qKeys.forEach((_,qi)=>{const col=base+qi;setF(col,`SUM(${ec(fRow,col)}:${ec(lRow,col)})`,rowQBgt(p,y,qi,true),excl?{...sTot,font:{...mn('9CA3AF',true,10),strike:true}}:sTot);});
+                setF(base+4,`${ec(ri,base)}+${ec(ri,base+1)}+${ec(ri,base+2)}+${ec(ri,base+3)}`,rowFYBgt(p,y,true),excl?{...sTot,font:{...mn('9CA3AF',true,10),strike:true}}:sTot);
+              });
+            }else{
+              visYrs.forEach((y,yi)=>{const col=FX+yi;setF(col,`SUM(${ec(fRow,col)}:${ec(lRow,col)})`,rowFYBgt(p,y,true),excl?{...sTot,font:{...mn('9CA3AF',true,10),strike:true}}:sTot);});
+            }
+            const fyTotCols=isQtr?visYrs.map((_,yi)=>ec(ri,FX+yi*PY+4)):visYrs.map((_,yi)=>ec(ri,FX+yi));
+            setF(progBase,`SUM(${fyTotCols.join(',')})`,rowProgBgt(p,true),excl?{...sTot,font:{...mn('9CA3AF',true,10),strike:true}}:sTot);
+          }else{
+            if(isQtr){visYrs.forEach((y,yi)=>{const base=FX+yi*PY;qKeys.forEach((_,qi)=>setN(base+qi,rowQBgt(p,y,qi,true),sTot));setN(base+4,rowFYBgt(p,y,true),sTot);});}
+            else{visYrs.forEach((y,yi)=>setN(FX+yi,rowFYBgt(p,y,true),sTot));}
+            setN(progBase,rowProgBgt(p,true),sTot);
+          }
+          ws2['!rows'][ri]={hpx:20};
+        }
+        else if(p.t==='grand'){
+          styleAll(sGrand);
+          ws2[ec(ri,0)].v='TOTAL PROGRAMME';ws2[ec(ri,0)].s=sGrandL;
+          const progBase=FX+visYrs.length*PY;
+          // Build SUM formulas from ctot rows
+          const ctotRIs=Object.values(catRowMap).map(v=>v.ctot).filter(r=>r!=null);
+          if(ctotRIs.length>0){
+            if(isQtr){
+              visYrs.forEach((y,yi)=>{
+                const base=FX+yi*PY;
+                qKeys.forEach((_,qi)=>{const col=base+qi;setF(col,ctotRIs.map(cr=>ec(cr,col)).join('+'),rowQBgt(p,y,qi),sGrand);});
+                setF(base+4,`${ec(ri,base)}+${ec(ri,base+1)}+${ec(ri,base+2)}+${ec(ri,base+3)}`,rowFYBgt(p,y),sGrand);
+              });
+            }else{
+              visYrs.forEach((y,yi)=>{const col=FX+yi;setF(col,ctotRIs.map(cr=>ec(cr,col)).join('+'),rowFYBgt(p,y),sGrand);});
+            }
+            const fyTotCols=isQtr?visYrs.map((_,yi)=>ec(ri,FX+yi*PY+4)):visYrs.map((_,yi)=>ec(ri,FX+yi));
+            setF(progBase,`SUM(${fyTotCols.join(',')})`,rowProgBgt(p),sGrand);
+          }else{
+            if(isQtr){visYrs.forEach((y,yi)=>{const base=FX+yi*PY;qKeys.forEach((_,qi)=>setN(base+qi,rowQBgt(p,y,qi),sGrand));setN(base+4,rowFYBgt(p,y),sGrand);});}
+            else{visYrs.forEach((y,yi)=>setN(FX+yi,rowFYBgt(p,y),sGrand));}
+            setN(progBase,rowProgBgt(p),sGrand);
+          }
+          ws2['!rows'][ri]={hpx:24};
+        }
+      });
+      ws2['!cols']=isQtr
+        ?[{wch:46},...visYrs.flatMap(()=>[...Array(4).fill({wch:12}),{wch:14}]),{wch:17}]
+        :[{wch:46},...visYrs.map(()=>({wch:16})),{wch:17}];
+      ws2['!merges'].push({s:{r:0,c:0},e:{r:0,c:TC-1}});
+      ws2['!merges'].push({s:{r:1,c:0},e:{r:1,c:TC-1}});
+      if(isQtr){visYrs.forEach((_,i)=>ws2['!merges'].push({s:{r:2,c:FX+i*PY},e:{r:2,c:FX+i*PY+PY-1}}));}
+      ws2['!ref']=`A1:${ec(planRowsFull.length-1,TC-1)}`;
+      return ws2;
+    };
+    XLSX.utils.book_append_sheet(wb,buildSheet(false),'Budget Plan — Yearly');
+    XLSX.utils.book_append_sheet(wb,buildSheet(true),'Budget Plan — Quarterly');
+    XLSX.writeFile(wb,`ariadne-budget-plan-${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  // Shared move+toggle cell for category rows
+  const CatCtrlCell=({pc,i,total})=>{
+    const excl=isCatExcl(pc);
+    return(
+      <div className="flex items-center gap-1.5" style={{flexShrink:0}}>
+        <div className="flex flex-col" style={{gap:0}}>
+          <button style={mvBtn(i===0)} disabled={i===0}
+            onClick={e=>{e.stopPropagation();moveCat(pc,-1);}}
+            title="Move category up">&#9650;</button>
+          <button style={mvBtn(i===total-1)} disabled={i===total-1}
+            onClick={e=>{e.stopPropagation();moveCat(pc,1);}}
+            title="Move category down">&#9660;</button>
+        </div>
+        <input type="checkbox" checked={!excl}
+          title={excl?'Click to include in totals':'Click to exclude from totals'}
+          onChange={()=>toggleExcluded('cat:'+pc)}
+          style={{accentColor:NAVY,width:13,height:13,cursor:'pointer',flexShrink:0}}/>
+      </div>
+    );
+  };
+
+  // Shared move+toggle cell for item rows
+  const ItemCtrlCell=({pc,id,idx,total,isGrp})=>{
+    const excl=isExcl(id);
+    const catExcl=isCatExcl(pc);
+    return(
+      <div className="flex items-center gap-1.5" style={{flexShrink:0}}>
+        <div className="flex flex-col" style={{gap:0}}>
+          <button style={mvBtn(idx===0)} disabled={idx===0}
+            onClick={e=>{e.stopPropagation();moveItem(pc,id,-1);}}
+            title="Move up">&#9650;</button>
+          <button style={mvBtn(idx===total-1)} disabled={idx===total-1}
+            onClick={e=>{e.stopPropagation();moveItem(pc,id,1);}}
+            title="Move down">&#9660;</button>
+        </div>
+        <input type="checkbox" checked={!excl&&!catExcl}
+          disabled={catExcl}
+          title={catExcl?'Category is excluded':excl?'Click to include':'Click to exclude from totals'}
+          onChange={()=>!catExcl&&toggleExcluded(id)}
+          style={{accentColor:isGrp?'#7c3aed':NAVY,width:13,height:13,cursor:catExcl?'not-allowed':'pointer',flexShrink:0}}/>
+      </div>
+    );
+  };
+
+  const nCols=1+visYrs.length*(showQtrs?5:1)+1;
+
+  return(
+    <div className="space-y-4">
+
+      {/* Controls */}
+      <div className="bg-white rounded-2xl shadow-sm px-5 py-3 flex flex-wrap gap-3 items-center justify-between no-print">
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Years:</span>
+          {years.map(y=>(
+            <button key={y} onClick={()=>setHiddenYrs(h=>h.includes(y)?h.filter(x=>x!==y):[...h,y])}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2"
+              style={!hiddenYrs.includes(y)?{background:`linear-gradient(135deg,${NAVY},${PURPLE})`,color:'white',borderColor:'transparent'}:{borderColor:'#d1d5db',color:'#9ca3af',background:'white'}}>
+              FY{y}{hiddenYrs.includes(y)?' (hidden)':''}
+            </button>
+          ))}
+          <div style={{width:1,height:20,background:'#e5e7eb',margin:'0 4px'}}/>
+          <button onClick={()=>setShowQtrs(q=>!q)}
+            className="px-3 py-1.5 rounded-xl text-xs font-bold border-2 transition-all"
+            style={showQtrs?{background:PURPLE,color:'white',borderColor:'transparent'}:{borderColor:'#d1d5db',color:'#6b7280',background:'white'}}>
+            {showQtrs?'Hide Quarters':'Show Quarters'}
+          </button>
+        </div>
+        <div className="flex gap-2 items-center flex-wrap">
+          <button onClick={openNew}
+            className="px-3 py-2 rounded-xl text-xs font-bold text-white shadow-sm"
+            style={{background:`linear-gradient(135deg,#7c3aed,#4f46e5)`}}>
+            + New Group
+          </button>
+          <button onClick={()=>window.print()}
+            className="px-3 py-2 rounded-xl text-xs font-bold border border-gray-200 bg-white text-gray-600 hover:border-indigo-300 hover:text-indigo-600 transition-colors">
+            Print / PDF
+          </button>
+          <button onClick={exportPlanExcel}
+            className="px-3 py-2 bg-white rounded-xl text-xs font-black shadow-sm border border-gray-200"
+            style={{color:NAVY}}>
+            ↓ Excel
+          </button>
+        </div>
+      </div>
+
+      {/* Group editor panel */}
+      {panelOpen&&(
+        <div className="bg-white rounded-2xl shadow-sm p-5 no-print border border-indigo-100">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-black text-gray-800 text-base">{editGrp?.id?'Edit Group':'New Group'}</h3>
+            <button onClick={()=>setPanelOpen(false)} className="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none">&times;</button>
+          </div>
+          <div className="grid gap-4 mb-4" style={{gridTemplateColumns:'1fr 1fr'}}>
+            <div>
+              <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Group Name</label>
+              <input className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                value={draftName} onChange={e=>setDraftName(e.target.value)}
+                onKeyDown={e=>e.key==='Enter'&&saveGrp()}
+                placeholder="e.g. IND Package, Phase 1 Studies..."/>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Section / Category Label</label>
+              <input list="plan-cat-datalist"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                value={draftCatLabel} onChange={e=>setDraftCatLabel(e.target.value)}
+                placeholder="Type a name or pick existing..."/>
+              <datalist id="plan-cat-datalist">
+                {[...new Set([...planCats,...allActCats.map(c=>dispCat(c))])].map(c=><option key={c} value={c}/>)}
+              </datalist>
+              <p className="text-xs text-gray-400 mt-1">Groups with the same label appear in the same section.</p>
+            </div>
+          </div>
+          <div className="mb-5">
+            <label className="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">
+              Activities to include&nbsp;
+              <span className="font-normal text-gray-400 normal-case">({draftActIds.length} selected)</span>
+            </label>
+            <div className="border border-gray-100 rounded-xl overflow-y-auto" style={{maxHeight:260}}>
+              {allActCats.map(cat=>{
+                const catActs=acts.filter(a=>a.category===cat);
+                if(!catActs.length)return null;
+                return(
+                  <div key={cat}>
+                    <div className="px-3 py-1.5 text-xs font-black uppercase tracking-wider"
+                      style={{background:cc(cat)+'22',color:cc(cat)}}>
+                      {dispCat(cat)}
+                    </div>
+                    {catActs.map(a=>{
+                      const inOther=(planGroups||[]).find(g=>g.id!==(editGrp?.id)&&g.actIds.includes(a.id));
+                      const checked=draftActIds.includes(a.id);
+                      return(
+                        <label key={a.id}
+                          className="flex items-center gap-2 px-4 py-1.5 text-sm transition-colors"
+                          style={{background:checked?'#eef2ff':inOther?'#fafafa':'white',opacity:inOther?0.45:1,cursor:inOther?'not-allowed':'pointer'}}>
+                          <input type="checkbox" checked={checked} disabled={!!inOther}
+                            onChange={()=>!inOther&&toggleDraftAct(a.id)}
+                            style={{accentColor:'#4f46e5'}}/>
+                          <span style={{color:inOther?'#9ca3af':'#374151'}}>{a.name||'(unnamed)'}</span>
+                          {inOther&&<span className="ml-auto text-xs text-gray-400 italic">&rarr; {inOther.name}</span>}
+                        </label>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="flex gap-2 justify-between items-center">
+            <div>
+              {editGrp?.id&&(
+                <button onClick={()=>deleteGrp(editGrp.id)}
+                  className="px-4 py-2 rounded-xl text-sm text-red-400 hover:bg-red-50 transition-colors">
+                  Delete group
+                </button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button onClick={()=>setPanelOpen(false)} className="px-4 py-2 rounded-xl text-sm text-gray-500 hover:bg-gray-100">Cancel</button>
+              <button onClick={saveGrp} disabled={!draftName.trim()}
+                className="px-5 py-2 rounded-xl text-white text-sm font-bold shadow-sm disabled:opacity-40"
+                style={{background:`linear-gradient(135deg,#7c3aed,#4f46e5)`}}>
+                Save Group
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Active groups chips */}
+      {(planGroups||[]).length>0&&!panelOpen&&(
+        <div className="bg-white rounded-2xl shadow-sm px-5 py-3 no-print">
+          <div className="flex flex-wrap gap-2 items-center">
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mr-1">Groups:</span>
+            {(planGroups||[]).map(g=>(
+              <div key={g.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-indigo-100 bg-indigo-50 text-xs">
+                <span className="font-bold text-indigo-800">{g.name}</span>
+                <span className="text-indigo-300">&rarr;</span>
+                <span className="text-indigo-600 italic">{g.catLabel}</span>
+                <span className="text-indigo-300">({g.actIds.length})</span>
+                <button onClick={()=>openEdit(g)} className="ml-1 text-indigo-400 hover:text-indigo-700" title="Edit">&#9998;</button>
+                <button onClick={()=>deleteGrp(g.id)} className="text-red-300 hover:text-red-500 font-bold" title="Remove">&times;</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Budget table */}
+      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-xs"
+            style={{minWidth:Math.max(600,280+visYrs.length*(showQtrs?5:1)*95)}}>
+            <thead>
+              <tr style={{background:NAVY}}>
+                <th className="py-3 px-3 text-white text-left font-bold" rowSpan={showQtrs?2:1}
+                  style={{minWidth:260}}>
+                  Activity / Group
+                </th>
+                {visYrs.map(y=>(
+                  <th key={y} className="py-3 px-2 text-white/80 font-bold text-center"
+                    colSpan={showQtrs?5:1}
+                    style={{borderLeft:'2px solid rgba(255,255,255,0.15)'}}>
+                    FY{y}
+                  </th>
+                ))}
+                <th className="py-3 px-3 font-bold text-center text-yellow-200 text-xs"
+                  rowSpan={showQtrs?2:1}
+                  style={{borderLeft:'2px solid rgba(255,255,255,0.25)',background:'rgba(255,255,255,0.08)',minWidth:100}}>
+                  Programme<br/>Budget
+                </th>
+              </tr>
+              {showQtrs&&(
+                <tr style={{background:NAVY+'cc'}}>
+                  {visYrs.map(y=>(
+                    <React.Fragment key={y}>
+                      {['Q1','Q2','Q3','Q4'].map((q,qi)=>(
+                        <th key={q} className="py-1.5 px-1 text-blue-200 font-semibold text-center"
+                          style={{width:88,borderLeft:qi===0?'2px solid rgba(255,255,255,0.15)':'1px solid rgba(255,255,255,0.08)'}}>
+                          {q}
+                        </th>
+                      ))}
+                      <th className="py-1.5 px-2 font-black text-center"
+                        style={{width:100,borderLeft:'3px solid #93c5fd',background:'rgba(147,197,253,0.18)',color:'#bfdbfe'}}>
+                        FY Bgt
+                      </th>
+                    </React.Fragment>
+                  ))}
+                </tr>
+              )}
+            </thead>
+            <tbody>
+              {(()=>{
+                const catCount=planCats.filter(pc=>{const items=getOrderedItems(pc);return items.length>0;}).length;
+                let catIdx=0;
+                return rows.map((row,i)=>{
+                  if(row.t==='cat'){
+                    const col=cc(row.catKey)||NAVY;
+                    const excl=isCatExcl(row.label);
+                    const ci=catIdx++;
+                    const items=getOrderedItems(row.label);
+                    return(
+                      <tr key={i} style={{background:excl?'#f9fafb':col+'14'}}>
+                        <td colSpan={nCols}
+                          className="py-1.5 px-3"
+                          style={{borderLeft:`4px solid ${excl?'#d1d5db':col}`}}>
+                          <div className="flex items-center gap-2">
+                            <CatCtrlCell pc={row.label} i={ci} total={catCount}/>
+                            <span className="font-black text-sm uppercase tracking-wide"
+                              style={{color:excl?'#9ca3af':col,textDecoration:excl?'line-through':'none'}}>
+                              {row.label}
+                            </span>
+                            {excl&&<span className="text-xs text-gray-400 font-normal normal-case">(excluded from totals)</span>}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+                  if(row.t==='grp'||row.t==='act'){
+                    const isGrp=row.t==='grp';
+                    const id=isGrp?row.g.id:row.a.id;
+                    const label=isGrp?row.g.name:row.a.name;
+                    const excl=isExcl(id);
+                    const catExcl=isCatExcl(row.t==='grp'?(row.g.catLabel||'Other'):(dispCat(row.a.category)));
+                    const dimmed=excl||catExcl;
+                    // Find position within category
+                    const pc=isGrp?(row.g.catLabel||'Other'):dispCat(row.a.category);
+                    const items=getOrderedItems(pc);
+                    const idx=items.findIndex(x=>x.id===id);
+                    return(
+                      <tr key={i} style={{background:dimmed?'#f9fafb':isGrp?'#F5F3FF':i%2===0?'#FAFCFF':'#F3F7FF',opacity:dimmed?0.6:1}}>
+                        <td className="py-2 px-3">
+                          <div className="flex items-center gap-2">
+                            <ItemCtrlCell pc={pc} id={id} idx={idx} total={items.length} isGrp={isGrp}/>
+                            <div style={{minWidth:0}}>
+                              {isGrp&&<span className="inline-block mr-1 font-black text-purple-400 text-xs">&#x229e;</span>}
+                              <span style={{
+                                color:dimmed?'#9ca3af':isGrp?'#5b21b6':'#374151',
+                                fontWeight:isGrp?600:400,
+                                textDecoration:excl?'line-through':'none'
+                              }}>{label||'(unnamed)'}</span>
+                              {isGrp&&!dimmed&&<span className="ml-1.5 text-purple-300" style={{fontSize:10}}>({row.g.actIds.length})</span>}
+                            </div>
+                          </div>
+                        </td>
+                        {visYrs.map(y=>(
+                          <React.Fragment key={y}>
+                            {showQtrs&&[0,1,2,3].map(qi=>(
+                              <td key={qi} className="py-2 px-2 text-right"
+                                style={{
+                                  color:dimmed?'#d1d5db':isGrp?'#6d28d9':'#1d4ed8',
+                                  borderLeft:qi===0?'2px solid #dbeafe':'1px solid #f3f4f6',
+                                  fontWeight:isGrp?600:400
+                                }}>
+                                {fmtN(rowQBgt(row,y,qi))}
+                              </td>
+                            ))}
+                            <td className="py-2 px-2 text-right font-bold"
+                              style={{
+                                color:dimmed?'#d1d5db':isGrp?'#4c1d95':'#1e3a8a',
+                                borderLeft:showQtrs?'3px solid #93c5fd':'2px solid #dbeafe',
+                                background:dimmed?'transparent':isGrp?'rgba(167,139,250,0.15)':'rgba(219,234,254,0.3)'
+                              }}>
+                              {fmtN(rowFYBgt(row,y))}
+                            </td>
+                          </React.Fragment>
+                        ))}
+                        <td className="py-2 px-3 text-right font-black"
+                          style={{
+                            background:dimmed?'transparent':isGrp?'rgba(139,92,246,0.12)':'rgba(238,237,248,0.5)',
+                            color:dimmed?'#d1d5db':isGrp?'#4c1d95':NAVY,
+                            borderLeft:'2px solid rgba(26,18,110,0.12)'
+                          }}>
+                          {fmtN(rowProgBgt(row))}
+                        </td>
+                      </tr>
+                    );
+                  }
+                  if(row.t==='ctot'){
+                    const excl=isCatExcl(row.label);
+                    return(
+                      <tr key={i} style={{background:excl?'#f3f4f6':'#EEEDF8'}}>
+                        <td className="py-2 px-3 font-bold" style={{paddingLeft:48,color:excl?'#9ca3af':'#1A126E',textDecoration:excl?'line-through':'none'}}>
+                          {row.label} — Total {excl&&<span className="text-xs font-normal">(excluded)</span>}
+                        </td>
+                        {visYrs.map(y=>(
+                          <React.Fragment key={y}>
+                            {showQtrs&&[0,1,2,3].map(qi=>(
+                              <td key={qi} className="py-2 px-2 text-right font-semibold"
+                                style={{color:excl?'#d1d5db':'#1A126E',borderLeft:qi===0?'2px solid #c7d2fe':'1px solid #e0e7ff'}}>
+                                {fmtN(rowQBgt(row,y,qi,true))}
+                              </td>
+                            ))}
+                            <td className="py-2 px-2 text-right font-bold"
+                              style={{borderLeft:showQtrs?'3px solid #93c5fd':'2px solid #c7d2fe',background:excl?'#f3f4f6':'#dbeafe',color:excl?'#d1d5db':'#312e81'}}>
+                              {fmtN(rowFYBgt(row,y,true))}
+                            </td>
+                          </React.Fragment>
+                        ))}
+                        <td className="py-2 px-3 text-right font-black"
+                          style={{background:excl?'#f3f4f6':'#dbeafe',color:excl?'#d1d5db':'#312e81',borderLeft:'2px solid rgba(26,18,110,0.2)'}}>
+                          {fmtN(rowProgBgt(row,true))}
+                        </td>
+                      </tr>
+                    );
+                  }
+                  if(row.t==='grand'){
+                    return(
+                      <tr key={i} style={{background:NAVY}}>
+                        <td className="py-3 px-3 font-black text-white text-sm">TOTAL PROGRAMME</td>
+                        {visYrs.map(y=>(
+                          <React.Fragment key={y}>
+                            {showQtrs&&[0,1,2,3].map(qi=>(
+                              <td key={qi} className="py-3 px-2 text-right font-semibold text-blue-200"
+                                style={{borderLeft:qi===0?'2px solid rgba(255,255,255,0.2)':'1px solid rgba(255,255,255,0.1)'}}>
+                                {fmtN(rowQBgt(row,y,qi))}
+                              </td>
+                            ))}
+                            <td className="py-3 px-2 text-right font-black text-white"
+                              style={{borderLeft:showQtrs?'3px solid rgba(147,197,253,0.5)':'2px solid rgba(255,255,255,0.2)',background:'rgba(255,255,255,0.08)'}}>
+                              {fmtN(rowFYBgt(row,y))}
+                            </td>
+                          </React.Fragment>
+                        ))}
+                        <td className="py-3 px-3 text-right font-black text-yellow-300"
+                          style={{borderLeft:'2px solid rgba(255,255,255,0.2)'}}>
+                          {fmtN(rowProgBgt(row))}
+                        </td>
+                      </tr>
+                    );
+                  }
+                  return null;
+                });
+              })()}
+              {rows.filter(r=>r.t==='grp'||r.t==='act').length===0&&(
+                <tr><td colSpan={nCols}
+                  className="py-12 text-center text-gray-400 text-sm">
+                  No activities found. Data syncs automatically from Budget Tracker.
+                </td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 const SK='ariadne_v5';
 function App(){
   const saved=useMemo(()=>{try{const s=localStorage.getItem(SK);return s?JSON.parse(s):null;}catch{return null;}},[]);
@@ -2976,10 +3715,14 @@ function App(){
   const[addCatModal,setAddCatModal]=useState(false);
   const[newCatName,setNewCatName]=useState('');
   const[catColors,setCatColors]=useState(()=>saved?.catColors||{});
+  const[planGroups,setPlanGroups]=useState(()=>saved?.planGroups||[]);
+  const[planCatOrder,setPlanCatOrder]=useState(()=>saved?.planCatOrder||[]);
+  const[planItemOrder,setPlanItemOrder]=useState(()=>saved?.planItemOrder||{});
+  const[planExcluded,setPlanExcluded]=useState(()=>saved?.planExcluded||[]);
 
   useEffect(()=>{
-    try{localStorage.setItem(SK,JSON.stringify({acts,years,contributions,openingBalance,openingBalanceYear,openingBalanceQtr,closingBalanceOverride,customStatuses,catNames,customCats,catColors,catOrder,scenarios}));}catch{}
-  },[acts,years,contributions,openingBalance,openingBalanceYear,openingBalanceQtr,closingBalanceOverride,customStatuses,catNames,customCats,catColors,catOrder,scenarios]);
+    try{localStorage.setItem(SK,JSON.stringify({acts,years,contributions,openingBalance,openingBalanceYear,openingBalanceQtr,closingBalanceOverride,customStatuses,catNames,customCats,catColors,catOrder,scenarios,planGroups,planCatOrder,planItemOrder,planExcluded}));}catch{}
+  },[acts,years,contributions,openingBalance,openingBalanceYear,openingBalanceQtr,closingBalanceOverride,customStatuses,catNames,customCats,catColors,catOrder,scenarios,planGroups,planCatOrder,planItemOrder,planExcluded]);
   useEffect(()=>{
     const handler=e=>{if((e.ctrlKey||e.metaKey)&&e.key==='z'&&!e.shiftKey){e.preventDefault();undo();}};
     window.addEventListener('keydown',handler);
@@ -3068,7 +3811,7 @@ function App(){
   const toggleHideYear=y=>setHiddenYears(h=>h.includes(y)?h.filter(x=>x!==y):[...h,y]);
   const[excludedFromTotal,setExcludedFromTotal]=useState([]);
   const toggleExcludeFromTotal=y=>setExcludedFromTotal(h=>h.includes(y)?h.filter(x=>x!==y):[...h,y]);
-  const snapState=()=>({acts,years,catOrder,catNames,customCats,catColors,contributions,openingBalance,openingBalanceYear,openingBalanceQtr});
+  const snapState=()=>({acts,years,catOrder,catNames,customCats,catColors,contributions,openingBalance,openingBalanceYear,openingBalanceQtr,planGroups,planCatOrder,planItemOrder,planExcluded});
   const pushUndo=()=>{undoRef.current=[...undoRef.current.slice(-19),snapState()];setCanUndo(true);};
   const undo=()=>{const h=undoRef.current;if(!h.length)return;const p=h[h.length-1];undoRef.current=h.slice(0,-1);setCanUndo(undoRef.current.length>0);setActs(p.acts);setYears(p.years);setCatOrder(p.catOrder);setCatNames(p.catNames);setCustomCats(p.customCats);setCatColors(p.catColors);setContributions(p.contributions);setOpeningBalance(p.openingBalance);setOpeningBalanceYear(p.openingBalanceYear);setOpeningBalanceQtr(p.openingBalanceQtr);};
   const deleteYear=y=>{if(!confirm(`Delete FY${y}? All budget and actual data for this year will be removed.`))return;pushUndo();setYears(yy=>yy.filter(yr=>yr!==y));setActs(s=>s.map(a=>{const ny={...a.years};delete ny[y];return{...a,years:ny};}));setExcludedFromTotal(h=>h.filter(x=>x!==y));setHiddenYears(h=>h.filter(x=>x!==y));};
@@ -3347,7 +4090,7 @@ function App(){
   },[]);
   // Export/Import
   const exportJSON=()=>{
-    const b=new Blob([JSON.stringify({acts,years,contributions,openingBalance,openingBalanceYear,openingBalanceQtr,closingBalanceOverride,customStatuses,catNames,customCats,catOrder,catColors,scenarios},null,2)],{type:'application/json'});
+    const b=new Blob([JSON.stringify({acts,years,contributions,openingBalance,openingBalanceYear,openingBalanceQtr,closingBalanceOverride,customStatuses,catNames,customCats,catOrder,catColors,scenarios,planGroups,planCatOrder,planItemOrder,planExcluded},null,2)],{type:'application/json'});
     const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`ariadne-budget-${new Date().toISOString().split('T')[0]}.json`;a.click();
   };
   const importJSON=e=>{
@@ -3369,6 +4112,10 @@ function App(){
           if(d.catOrder)setCatOrder(d.catOrder);
           if(d.catColors)setCatColors(d.catColors);
           if(d.scenarios)setScenarios(d.scenarios);
+          if(d.planGroups)setPlanGroups(d.planGroups);
+          if(d.planCatOrder)setPlanCatOrder(d.planCatOrder);
+          if(d.planItemOrder)setPlanItemOrder(d.planItemOrder);
+          if(d.planExcluded)setPlanExcluded(d.planExcluded);
           alert('✓ Imported successfully.');
         }else alert('Invalid format.');
       }catch{alert('Cannot parse file.');}
@@ -3613,18 +4360,23 @@ function App(){
       return ws2;
     };
     // ── Yearly sheet ──────────────────────────────────────────────────────────
-    const ws=buildSheet(false,exportBudOnly);
-    ws['!cols']=exportBudOnly
-      ?[{wch:44},{wch:22},{wch:7},{wch:5},...visYrs.map(()=>({wch:14})),{wch:16}]
-      :[{wch:44},{wch:22},{wch:7},{wch:5},...visYrs.flatMap(()=>[{wch:14},{wch:14},{wch:12}]),{wch:16},{wch:16},{wch:14}];
-    XLSX.utils.book_append_sheet(wb,ws,exportBudOnly?'DD View — Budget Only':'DD View — Yearly');
-    // ── Quarterly sheet ───────────────────────────────────────────────────────
-    const qws=buildSheet(true,exportBudOnly);
-    qws['!cols']=exportBudOnly
-      ?[{wch:44},{wch:22},{wch:7},{wch:5},...visYrs.flatMap(()=>[...Array(4).fill({wch:11}),{wch:13}]),{wch:16}]
-      :[{wch:44},{wch:22},{wch:7},{wch:5},...visYrs.flatMap(()=>[...Array(8).fill({wch:11}),{wch:13},{wch:13},{wch:12}]),{wch:16},{wch:16},{wch:14}];
-    XLSX.utils.book_append_sheet(wb,qws,exportBudOnly?'DD View — Budget Only (Qtr)':'DD View — Quarterly');
-    // ── Contributions sheet ───────────────────────────────────────────────────
+    const budOnly=exportBudOnly;
+    const ws=buildSheet(false,budOnly);
+    if(budOnly){
+      ws['!cols']=[{wch:44},{wch:22},{wch:7},{wch:5},...visYrs.flatMap(()=>[{wch:14}]),{wch:16}];
+    }else{
+      ws['!cols']=[{wch:44},{wch:22},{wch:7},{wch:5},...visYrs.flatMap(()=>[{wch:14},{wch:14},{wch:12}]),{wch:16},{wch:16},{wch:14}];
+    }
+    XLSX.utils.book_append_sheet(wb,ws,budOnly?'DD View — Budget Only':'DD View — Yearly');
+    // ── Quarterly sheet ──────────────────────────────────────────────────────
+    const qws=buildSheet(true,budOnly);
+    if(budOnly){
+      qws['!cols']=[{wch:44},{wch:22},{wch:7},{wch:5},...visYrs.flatMap(()=>[...Array(4).fill({wch:11}),{wch:13}]),{wch:16}];
+    }else{
+      qws['!cols']=[{wch:44},{wch:22},{wch:7},{wch:5},...visYrs.flatMap(()=>[...Array(8).fill({wch:11}),{wch:13},{wch:13},{wch:12}]),{wch:16},{wch:16},{wch:14}];
+    }
+    XLSX.utils.book_append_sheet(wb,qws,budOnly?'DD View — Quarterly Budget':'DD View — Quarterly');
+        // ── Contributions sheet ───────────────────────────────────────────────────
     if(contributions&&contributions.length>0){
       const cd=[];
       cd.push(['Ariadne Bio — Contributions & Cash Funding']);
@@ -3652,6 +4404,7 @@ function App(){
     {id:'budget',l:'💼 Budget Tracker'},
     {id:'programme',l:'📋 Programme Total'},
     {id:'timeline',l:'📅 Timeline'},
+    {id:'budgetplan',l:'📐 Budget Plan'},
     {id:'scenarios',l:'🎯 Scenarios'},
   ];
   const visYears=years.filter(y=>!hiddenYears.includes(y));
@@ -3671,8 +4424,9 @@ function App(){
             <label className="flex items-center gap-1.5 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-white text-xs font-bold cursor-pointer transition-colors">↑ Import JSON<input type="file" accept=".json" onChange={importJSON} className="hidden"/></label>
             <button onClick={exportJSON} className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-white text-xs font-bold transition-colors">↓ Export JSON</button>
             <div className="flex items-center gap-1.5">
-              <label className="flex items-center gap-1 text-white/60 text-xs cursor-pointer select-none">
-                <input type="checkbox" checked={exportBudOnly} onChange={e=>setExportBudOnly(e.target.checked)}/>
+              <label className="flex items-center gap-1 text-white/60 text-xs cursor-pointer select-none" title="Export budget figures only, no actuals or variance">
+                <input type="checkbox" checked={exportBudOnly} onChange={e=>setExportBudOnly(e.target.checked)}
+                  style={{accentColor:"white",width:12,height:12}}/>
                 <span>Budget only</span>
               </label>
               <button onClick={exportExcel} className="px-3 py-2 bg-white rounded-xl text-xs font-black shadow-sm" style={{color:NAVY}}>↓ Excel</button>
@@ -3812,6 +4566,8 @@ function App(){
         )}
 
         {tab==='timeline'&&<TimelineTab acts={dispActs} years={years} catNames={catNames} catColors={catColors}/>}
+
+        {tab==='budgetplan'&&<BudgetPlanTab acts={acts} years={years} catNames={catNames} catColors={catColors} catOrder={catOrder} planGroups={planGroups} onSavePlanGroups={setPlanGroups} planCatOrder={planCatOrder} onSavePlanCatOrder={setPlanCatOrder} planItemOrder={planItemOrder} onSavePlanItemOrder={setPlanItemOrder} planExcluded={planExcluded} onSavePlanExcluded={setPlanExcluded}/>}
 
         {tab==='scenarios'&&<ScenariosPanel
           acts={acts} years={years} scenarios={scenarios}
